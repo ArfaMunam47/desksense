@@ -1,0 +1,6 @@
+{
+  "name": "DeskSense",
+  "description": "Intelligent desktop assistance and step-by-step computer literacy guidance for everyday computer tasks.",
+  "requestFramePermissions": ["display-capture"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
