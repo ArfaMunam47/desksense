@@ -277,6 +277,236 @@ Return a structured response.`;
   }
 });
 
+// Dedicated Coding Help endpoint
+app.post('/api/coding-help', async (req, res) => {
+  try {
+    const {
+      taskType = 'explain_error',
+      environment = 'Visual Studio Code',
+      description,
+      codeSnippet,
+      errorMessage,
+      imageBase64,
+      followUpHistory = [],
+    } = req.body;
+
+    if (!description && !codeSnippet && !errorMessage && !imageBase64) {
+      return res.status(400).json({
+        error: 'Please provide at least a description, error message, code snippet, or screenshot.',
+      });
+    }
+
+    if (!ai) {
+      return res.status(503).json({
+        configured: false,
+        error:
+          'AI Coding Assistant is currently unconfigured because GEMINI_API_KEY is not set. You can browse verified Programming guides in the Task Library.',
+      });
+    }
+
+    const taskTypeLabels: Record<string, string> = {
+      explain_error: 'Explain an error and how to fix it',
+      explain_code: 'Explain what this code does in clear language',
+      terminal_output: 'Understand terminal output or command failures',
+      env_troubleshoot: 'Troubleshoot a development environment or PATH problem',
+      install_dependency: 'Understand installation, package, or dependency problems',
+      fix_issue: 'Get guidance fixing a coding bug or logic problem',
+      next_steps: 'Understand what to do next in this software project',
+    };
+
+    const taskGoal = taskTypeLabels[taskType] || 'Software assistance';
+
+    let promptText = `The user needs coding help in environment: ${environment}.
+Task objective: ${taskGoal}.
+
+User's description: ${description || 'Not provided'}
+${errorMessage ? `Reported Error Message:\n\`\`\`\n${errorMessage}\n\`\`\`\n` : ''}
+${codeSnippet ? `Provided Code Snippet:\n\`\`\`\n${codeSnippet}\n\`\`\`\n` : ''}
+
+${
+  followUpHistory.length > 0
+    ? `Previous conversation context:\n${followUpHistory
+        .map((h: any) => `${h.role === 'user' ? 'User' : 'DeskSense'}: ${h.text}`)
+        .join('\n')}\n`
+    : ''
+}
+
+Perform the following 6 requirements:
+1. Identify what the user is trying to accomplish (identifiedGoal).
+2. Explain the problem in calm, understandable language without assuming expert jargon (problemExplanation).
+3. Identify likely causes while honestly acknowledging uncertainty if context is missing (likelyCauses).
+4. Formulate a SAFE solution. If any command or code could delete data, wipe git history, or overwrite files (e.g., rm, git reset --hard, force flags), explicitly set isPotentiallyDestructive: true and state why in destructiveWarning.
+5. Provide step-by-step guidance actions (steps).
+6. Provide a clean, proposed code diff or replacement snippet if applicable.
+7. Include a memorable developer learning takeaway.
+8. Suggest 2-3 logical follow-up questions the user can ask next.`;
+
+    const contentsParts: any[] = [];
+
+    if (imageBase64) {
+      const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+      contentsParts.push({
+        inlineData: {
+          mimeType: 'image/png',
+          data: cleanBase64,
+        },
+      });
+    }
+
+    contentsParts.push({
+      text: promptText,
+    });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: { parts: contentsParts },
+      config: {
+        systemInstruction: `You are DeskSense Coding Mentor, a patient, safety-minded programming tutor.
+Your audience includes beginner coders, students, and developers troubleshooting unfamiliar tools.
+Never silently propose destructive actions.
+Always prioritize safety, explain potential risks of commands, and keep instructions step-by-step.`,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            identifiedGoal: {
+              type: Type.STRING,
+              description: 'Clear statement of what the user is trying to accomplish.',
+            },
+            problemExplanation: {
+              type: Type.STRING,
+              description: 'Plain-language explanation of why this error or roadblock occurred.',
+            },
+            likelyCauses: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: 'List of 1 to 3 plausible causes, acknowledging uncertainty.',
+            },
+            safeSolutionSummary: {
+              type: Type.STRING,
+              description: 'Summary of the safe, recommended fix.',
+            },
+            isPotentiallyDestructive: {
+              type: Type.BOOLEAN,
+              description: 'Whether any proposed command could erase files or overwrite history.',
+            },
+            destructiveWarning: {
+              type: Type.STRING,
+              description: 'Explicit warning explaining risk and backup procedure if destructive.',
+            },
+            steps: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  stepNumber: { type: Type.INTEGER },
+                  title: { type: Type.STRING },
+                  instruction: { type: Type.STRING },
+                  actionType: { type: Type.STRING },
+                  targetElement: { type: Type.STRING },
+                  tip: { type: Type.STRING },
+                },
+                required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
+              },
+            },
+            codeDiffOrSnippet: {
+              type: Type.OBJECT,
+              properties: {
+                language: { type: Type.STRING },
+                description: { type: Type.STRING },
+                code: { type: Type.STRING },
+              },
+              required: ['language', 'description', 'code'],
+            },
+            learningTakeaway: {
+              type: Type.STRING,
+              description: 'A clear computer science or programming takeaway.',
+            },
+            suggestedFollowUps: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: '2 to 3 helpful follow-up questions.',
+            },
+          },
+          required: [
+            'identifiedGoal',
+            'problemExplanation',
+            'likelyCauses',
+            'safeSolutionSummary',
+            'isPotentiallyDestructive',
+            'steps',
+            'learningTakeaway',
+          ],
+        },
+      },
+    });
+
+    const parsedData = JSON.parse(response.text || '{}');
+    return res.json({
+      success: true,
+      data: parsedData,
+    });
+  } catch (error: any) {
+    console.error('Error generating coding help:', error);
+    return res.status(500).json({
+      error: error.message || 'Failed to process coding query. Please try again.',
+    });
+  }
+});
+
+// Follow-up question endpoint for both Guided Help and Coding Help
+app.post('/api/follow-up', async (req, res) => {
+  try {
+    const { context, previousSteps = [], userFollowUp, mode = 'general' } = req.body;
+
+    if (!userFollowUp || typeof userFollowUp !== 'string') {
+      return res.status(400).json({
+        error: 'Please provide a follow-up question or clarification.',
+      });
+    }
+
+    if (!ai) {
+      return res.status(503).json({
+        configured: false,
+        error: 'AI service is currently not configured with an API key.',
+      });
+    }
+
+    const promptText = `The user is following up on an ongoing assistance session.
+Context: "${context}"
+Mode: "${mode}"
+
+Previous Steps provided so far:
+${previousSteps.map((s: any) => `Step ${s.stepNumber || '-'}: ${s.title || ''} - ${s.instruction || ''}`).join('\n')}
+
+User Follow-Up Question:
+"${userFollowUp}"
+
+Provide a patient, direct, and beginner-friendly response.
+If the user is asking to clarify a specific step or says they don't understand, break down that specific action.
+If they are asking "what if...", explain calmly.
+Keep your response concise, empathetic, and actionable.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: promptText,
+      config: {
+        systemInstruction: `You are DeskSense, an empathetic computer mentor. Answer follow-up questions concisely and calmly. Do not repeat greeting fluff. Focus directly on answering the user's specific point of confusion.`,
+      },
+    });
+
+    return res.json({
+      success: true,
+      answer: response.text || 'I understand. Let us review the current step carefully.',
+    });
+  } catch (error: any) {
+    console.error('Error answering follow-up:', error);
+    return res.status(500).json({
+      error: error.message || 'Failed to process follow-up question.',
+    });
+  }
+});
+
 // Mounting Vite in development or static files in production
 async function startServer() {
   if (!isProduction) {

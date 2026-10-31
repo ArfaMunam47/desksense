@@ -4,19 +4,25 @@ import {
   Trash2,
   CheckCircle2,
   Calendar,
-  Compass,
   Sparkles,
   ShieldCheck,
   BookOpen,
+  Code2,
+  Compass,
+  ArrowRight,
 } from 'lucide-react';
 import { HistoryItem } from '../types';
 import { loadHistory, deleteHistoryItem, clearAllHistory } from '../services/storage';
 
 interface HistoryViewProps {
   onResumeQuestion?: (question: string) => void;
+  onNavigateToCoding?: () => void;
 }
 
-export const HistoryView: React.FC<HistoryViewProps> = ({ onResumeQuestion }) => {
+export const HistoryView: React.FC<HistoryViewProps> = ({
+  onResumeQuestion,
+  onNavigateToCoding,
+}) => {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [confirmClearAll, setConfirmClearAll] = useState(false);
 
@@ -36,38 +42,38 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onResumeQuestion }) =>
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-7">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
-            <History className="w-4 h-4" />
-            <span>Learning Session History</span>
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3EFEB] text-[#254E4A] text-xs font-bold border border-[#254E4A]/30 shadow-2xs">
+            <History className="w-4 h-4 text-[#254E4A]" strokeWidth={2.25} />
+            <span>Assistance History</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Your Guided Sessions
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#3C3436]">
+            Previous Sessions
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Review tasks you completed previously to reinforce your learning.
+          <p className="text-xs text-[#6F6263]">
+            Review completed desktop guidance and coding help sessions from this device.
           </p>
         </div>
 
         {historyItems.length > 0 && (
           <div>
             {confirmClearAll ? (
-              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950/60 p-2 rounded-lg border border-red-200 dark:border-red-900">
-                <span className="text-xs text-red-700 dark:text-red-300 font-medium">Are you sure?</span>
+              <div className="flex items-center gap-2 bg-[#F5E2E3] p-2 rounded-xl border border-[#D98F9B]">
+                <span className="text-xs text-[#3C3436] font-bold">Clear all history?</span>
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  className="px-2.5 py-1 bg-red-600 text-white rounded text-xs font-medium cursor-pointer"
+                  className="px-3 py-1 bg-[#D98F9B] hover:bg-[#C77D89] text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-2xs"
                 >
-                  Yes, Clear All
+                  Yes, Clear
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmClearAll(false)}
-                  className="px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-xs cursor-pointer"
+                  className="px-3 py-1 bg-white text-[#3C3436] rounded-lg text-xs font-semibold cursor-pointer border border-[#E8DDDA]"
                 >
                   Cancel
                 </button>
@@ -76,10 +82,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onResumeQuestion }) =>
               <button
                 type="button"
                 onClick={() => setConfirmClearAll(true)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="px-3.5 py-2 rounded-xl border border-[#E8DDDA] text-[#6F6263] hover:text-[#D98F9B] hover:bg-[#F5E2E3] text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs bg-white"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Clear All History</span>
+                <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
+                <span>Clear History</span>
               </button>
             )}
           </div>
@@ -87,90 +93,122 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onResumeQuestion }) =>
       </div>
 
       {/* Privacy Notice */}
-      <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-xl p-3.5 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-        <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-        <p className="text-emerald-800/90 dark:text-emerald-300/80">
-          <strong>Privacy Guarantee:</strong> History records only the question title and completion record. Captured screenshots are <em>never</em> stored in your history or saved to disk.
+      <div className="bg-[#E3EFEB] border border-[#254E4A]/25 rounded-2xl p-4 text-xs text-[#3C3436] flex items-start gap-3 shadow-[0_2px_10px_rgba(37,78,74,0.04)]">
+        <ShieldCheck className="w-4.5 h-4.5 text-[#254E4A] shrink-0 mt-0.5" strokeWidth={2.25} />
+        <p className="leading-relaxed text-[#3C3436] font-medium">
+          <strong className="text-[#254E4A]">Privacy note:</strong> History records only store text titles and completed milestones in your browser's private local storage. Screenshots are never saved in your history.
         </p>
       </div>
 
       {/* History List */}
       {historyItems.length > 0 ? (
-        <div className="space-y-3">
-          {historyItems.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-blue-600 dark:text-blue-400">
-                      {item.category || 'General Computer'}
-                    </span>
-                    <span className="text-slate-400">•</span>
-                    <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(item.timestamp).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+        <div className="space-y-3.5">
+          {historyItems.map((item) => {
+            const isCoding = item.source === 'coding_help';
+            return (
+              <div
+                key={item.id}
+                className="bg-white border border-[#E8DDDA] rounded-2xl p-5 sm:p-6 shadow-[0_4px_16px_rgba(60,52,54,0.04)] hover:border-[#D98F9B] transition-all space-y-3.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span
+                        className={`inline-flex items-center gap-1.5 font-bold text-[11px] px-2.5 py-0.5 rounded-md border ${
+                          isCoding
+                            ? 'bg-[#E3EFEB] text-[#254E4A] border-[#254E4A]/25'
+                            : 'bg-[#F5E2E3] text-[#D98F9B] border-[#D98F9B]/40'
+                        }`}
+                      >
+                        {isCoding ? (
+                          <>
+                            <Code2 className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />
+                            <span>Coding Help</span>
+                          </>
+                        ) : (
+                          <>
+                            <Compass className="w-3.5 h-3.5 text-[#D98F9B]" strokeWidth={2.25} />
+                            <span>{item.category || 'Desktop Guidance'}</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="text-[#E8DDDA]">•</span>
+                      <span className="flex items-center gap-1 text-[#6F6263] font-mono text-[11px] font-semibold">
+                        <Calendar className="w-3 h-3" strokeWidth={2} />
+                        {new Date(item.timestamp).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+
+                    <h3 className="text-sm sm:text-base font-extrabold text-[#3C3436]">
+                      {item.question}
+                    </h3>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {item.question}
-                  </h3>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDelete(item.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  title="Delete from history"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Takeaway banner if present */}
-              {item.takeaway && (
-                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Takeaway:</strong> {item.takeaway}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-1 text-xs text-slate-500 dark:text-slate-400">
-                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{item.completedSteps} of {item.totalSteps} steps completed</span>
-                </span>
-
-                {onResumeQuestion && (
                   <button
                     type="button"
-                    onClick={() => onResumeQuestion(item.question)}
-                    className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-medium"
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 text-[#6F6263] hover:text-[#D98F9B] rounded-xl hover:bg-[#F5E2E3] transition-colors cursor-pointer"
+                    title="Delete record"
                   >
-                    Ask about this again →
+                    <Trash2 className="w-4 h-4" strokeWidth={2.25} />
                   </button>
+                </div>
+
+                {/* Takeaway banner if present */}
+                {item.takeaway && (
+                  <div className="bg-[#FFF9F5] p-3 rounded-xl border border-[#E8DDDA] text-xs text-[#3C3436] flex items-start gap-2.5">
+                    <Sparkles className="w-4 h-4 text-[#D98F9B] shrink-0 mt-0.5" strokeWidth={2.25} />
+                    <span className="leading-relaxed font-medium">
+                      <strong className="text-[#3C3436]">Takeaway:</strong> {item.takeaway}
+                    </span>
+                  </div>
                 )}
+
+                <div className="flex items-center justify-between pt-1 text-xs text-[#6F6263]">
+                  <span className="inline-flex items-center gap-1.5 text-[#254E4A] font-bold text-[11px]">
+                    <CheckCircle2 className="w-4 h-4 text-[#254E4A]" strokeWidth={2.25} />
+                    <span>{item.completedSteps} of {item.totalSteps} steps completed</span>
+                  </span>
+
+                  {isCoding && onNavigateToCoding ? (
+                    <button
+                      type="button"
+                      onClick={onNavigateToCoding}
+                      className="text-[#254E4A] hover:underline cursor-pointer font-bold flex items-center gap-1 text-xs"
+                    >
+                      <span>Open Coding Help</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />
+                    </button>
+                  ) : onResumeQuestion ? (
+                    <button
+                      type="button"
+                      onClick={() => onResumeQuestion(item.question.replace(/^\[Coding Help\]\s*/, ''))}
+                      className="text-[#D98F9B] hover:underline cursor-pointer font-bold flex items-center gap-1 text-xs"
+                    >
+                      <span>Reopen in Guided Help</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#D98F9B]" strokeWidth={2.25} />
+                    </button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-12 text-center space-y-3">
-          <BookOpen className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+        <div className="bg-white border border-[#E8DDDA] rounded-2xl p-12 text-center space-y-3.5 shadow-[0_4px_16px_rgba(60,52,54,0.04)]">
+          <div className="w-12 h-12 rounded-2xl bg-[#E3EFEB] text-[#254E4A] flex items-center justify-center mx-auto border border-[#254E4A]/25">
+            <BookOpen className="w-6 h-6 text-[#254E4A]" strokeWidth={2.25} />
+          </div>
+          <h3 className="text-sm font-extrabold text-[#3C3436]">
             No Saved Sessions Yet
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+          <p className="text-xs text-[#6F6263] max-w-sm mx-auto leading-relaxed">
             When you complete guided tasks or ask questions, your completed milestones will be listed here for quick review.
           </p>
         </div>

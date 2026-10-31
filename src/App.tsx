@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { TitleBar } from './components/TitleBar';
-import { Navigation, NavTab } from './components/Navigation';
+import { Navigation } from './components/Navigation';
 import { CaptureModal } from './components/CaptureModal';
 import { HomeView } from './views/HomeView';
 import { GuidedHelpView } from './views/GuidedHelpView';
 import { TaskLibraryView } from './views/TaskLibraryView';
+import { CodingHelpView } from './views/CodingHelpView';
 import { HistoryView } from './views/HistoryView';
+import { AboutView } from './views/AboutView';
 import { SettingsView } from './views/SettingsView';
 import {
   Task,
@@ -14,6 +16,7 @@ import {
   ScreenAnalysisData,
   AppSettings,
   ServerStatus,
+  NavTab,
 } from './types';
 import { VERIFIED_TASKS } from './data/taskLibrary';
 import { getServerStatus, analyzeScreen, askAssistant } from './services/api';
@@ -26,7 +29,8 @@ import {
 } from './services/storage';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState<NavTab>('home');
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [currentTab, setCurrentTab] = useState<NavTab>(settings.startupDestination || 'home');
   const [question, setQuestion] = useState<string>('');
   const [capture, setCapture] = useState<ScreenCapture | null>(null);
   const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
@@ -36,7 +40,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
-  const [settings, setSettings] = useState<AppSettings>(loadSettings);
 
   // Check backend server status on mount
   const checkStatus = async () => {
@@ -54,20 +57,13 @@ export default function App() {
     saveSettings(newSettings);
   };
 
-  // Dark mode class on html/body element
+  // Dark/pastel theme class on html/body element
   useEffect(() => {
     const root = document.documentElement;
     if (settings.theme === 'dark') {
       root.classList.add('dark');
-    } else if (settings.theme === 'light') {
-      root.classList.remove('dark');
     } else {
-      // System preference
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      root.classList.remove('dark');
     }
   }, [settings.theme]);
 
@@ -120,7 +116,7 @@ export default function App() {
     // Call server text assistant endpoint
     setIsLoading(true);
     try {
-      const res = await askAssistant(userQuestion);
+      const res = await askAssistant(userQuestion, settings.defaultOs);
       if (res.success && res.data) {
         const steps = res.data.steps.map((s) => ({
           ...s,
@@ -157,7 +153,7 @@ export default function App() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const res = await analyzeScreen(imageBase64, q);
+      const res = await analyzeScreen(imageBase64, q, settings.defaultOs);
       if (res.success && res.data) {
         setAnalysisData(res.data);
         setActiveSteps(res.data.steps);
@@ -251,37 +247,44 @@ export default function App() {
     setQuestion('');
   };
 
+  const handleSaveCodingHistory = (record: any) => {
+    if (settings.saveHistory) {
+      addHistoryItem(record);
+    }
+  };
+
   // Accessibility font scaling styling
   const getFontScaleClass = () => {
     switch (settings.fontSize) {
       case 'large':
-        return 'text-[17px]';
+        return 'text-[16px]';
       case 'extra-large':
-        return 'text-[19px]';
+        return 'text-[18px]';
       case 'normal':
       default:
-        return 'text-[15px]';
+        return 'text-[14px]';
     }
   };
 
   return (
     <div
-      className={`min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors ${getFontScaleClass()} ${
-        settings.highContrast ? 'contrast-125' : ''
+      className={`min-h-screen bg-[#FFF9F5] text-[#3C3436] flex flex-col font-sans transition-colors ${getFontScaleClass()} ${
+        settings.highContrast ? 'contrast-115' : ''
       }`}
     >
-      {/* TitleBar resembling Windows 11 desktop shell */}
+      {/* TitleBar resembling soft desktop window frame */}
       <TitleBar
         status={serverStatus}
         onQuickCapture={() => setIsCaptureModalOpen(true)}
         hasActiveCapture={Boolean(capture)}
       />
 
-      {/* Main App Navigation */}
+      {/* Main App Navigation - 7 Destinations in two-accent system */}
       <Navigation
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         hasActiveTask={activeSteps.length > 0 && currentStepIndex < activeSteps.length}
+        hasActiveCoding={false}
       />
 
       {/* View Content */}
@@ -292,6 +295,7 @@ export default function App() {
             onOpenCapture={() => setIsCaptureModalOpen(true)}
             onSelectTask={handleSelectTask}
             onNavigateToTasks={() => setCurrentTab('tasks')}
+            onNavigateToCoding={() => setCurrentTab('coding')}
             currentCapture={capture}
           />
         )}
@@ -328,11 +332,27 @@ export default function App() {
           <TaskLibraryView onSelectTask={handleSelectTask} />
         )}
 
+        {currentTab === 'coding' && (
+          <CodingHelpView
+            onOpenCapture={() => setIsCaptureModalOpen(true)}
+            currentCapture={capture}
+            onDiscardCapture={handleDiscardCapture}
+            onSaveToHistory={handleSaveCodingHistory}
+          />
+        )}
+
         {currentTab === 'history' && (
           <HistoryView
-            onResumeQuestion={(q) => {
-              handleAskQuestion(q);
-            }}
+            onResumeQuestion={(q) => handleAskQuestion(q)}
+            onNavigateToCoding={() => setCurrentTab('coding')}
+          />
+        )}
+
+        {currentTab === 'about' && (
+          <AboutView
+            serverStatus={serverStatus}
+            onNavigateToTasks={() => setCurrentTab('tasks')}
+            onNavigateToCoding={() => setCurrentTab('coding')}
           />
         )}
 
@@ -353,29 +373,30 @@ export default function App() {
         onClose={() => setIsCaptureModalOpen(false)}
         onCaptureComplete={(newCapture) => {
           setCapture(newCapture);
-          if (question) {
+          if (currentTab === 'home' && question) {
             setCurrentTab('guided');
             performScreenAnalysis(newCapture.dataUrl, question);
-          } else {
-            setCurrentTab('guided');
+          } else if (currentTab === 'guided' && question) {
+            performScreenAnalysis(newCapture.dataUrl, question);
           }
         }}
         currentCapture={capture}
         onDiscardCapture={handleDiscardCapture}
       />
 
-      {/* Desktop App Status Bar */}
-      <footer className="h-7 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-3 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between select-none">
-        <div className="flex items-center gap-3">
-          <span>DeskSense Desktop Foundation</span>
+      {/* Desktop App Status Bar in Clean White with Deep Teal accent */}
+      <footer className="h-7 bg-white border-t border-[#E8DDDA] px-4 text-[11px] text-[#6F6263] flex items-center justify-between select-none">
+        <div className="flex items-center gap-2">
+          <span className="font-extrabold text-[#3C3436]">DeskSense</span>
           <span>•</span>
-          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-            User-Authorized Observation
+          <span className="text-[#254E4A] font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#254E4A]" />
+            <span>User-Authorized Observation</span>
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px]">
-            {serverStatus?.platform || 'Web Environment'}
+          <span className="font-mono text-[10px] text-[#6F6263] font-medium">
+            {serverStatus?.platform || 'Web Environment (Desktop Bridge Ready)'}
           </span>
         </div>
       </footer>

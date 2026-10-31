@@ -2,15 +2,10 @@ import React, { useState, useMemo } from 'react';
 import {
   Search,
   BookOpen,
-  Filter,
-  CheckCircle2,
-  Clock,
-  Laptop,
   ArrowRight,
   ChevronDown,
   ChevronUp,
   AlertTriangle,
-  Lightbulb,
 } from 'lucide-react';
 import { Task, TaskCategory } from '../types';
 import { VERIFIED_TASKS, TASK_CATEGORIES } from '../data/taskLibrary';
@@ -58,48 +53,48 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 space-y-7">
       {/* Header */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400">
-          <BookOpen className="w-4 h-4" />
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E3EFEB] text-[#254E4A] text-xs font-bold border border-[#254E4A]/30 shadow-2xs">
+          <BookOpen className="w-4 h-4 text-[#254E4A]" strokeWidth={2.25} />
           <span>Verified Computer Tasks Catalog</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100">
-          Beginner Task Library
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#3C3436]">
+          Task Library
         </h1>
-        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl">
-          Browse vetted, step-by-step instructions for everyday Windows 11 and web tasks. No AI prompt required.
+        <p className="text-xs sm:text-sm text-[#6F6263] max-w-2xl leading-relaxed">
+          Browse vetted, step-by-step instructions for everyday Windows, browser, and development tasks. No AI prompt required.
         </p>
       </div>
 
       {/* Search and Filters Bar */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-4">
+      <div className="bg-white border border-[#E8DDDA] rounded-2xl p-5 sm:p-6 shadow-[0_4px_16px_rgba(60,52,54,0.04)] space-y-4">
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-3 w-4.5 h-4.5 text-[#254E4A]" strokeWidth={2.25} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search guides by keyword (e.g. 'download picture', 'bluetooth', 'zip', 'restart')..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            placeholder="Search guides by keyword (e.g. 'download picture', 'bluetooth', 'python', 'zip', 'restart')..."
+            className="w-full pl-11 pr-4 py-2.5 bg-[#FFF9F5] border border-[#E8DDDA] rounded-xl text-xs sm:text-sm text-[#3C3436] placeholder-[#6F6263] focus:outline-hidden focus:ring-2 focus:ring-[#D98F9B] focus:bg-white font-medium"
           />
         </div>
 
         {/* Category Filter Pills */}
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center justify-between">
-            <span>Filter by Category:</span>
-            <span>{filteredTasks.length} Guides Available</span>
+        <div className="space-y-2.5">
+          <div className="text-xs font-bold text-[#6F6263] flex items-center justify-between uppercase tracking-wider">
+            <span>Categories</span>
+            <span className="font-mono">{filteredTasks.length} Guides Available</span>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedCategory('All')}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 selectedCategory === 'All'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ? 'bg-[#254E4A] text-white shadow-[0_2px_8px_rgba(37,78,74,0.25)]'
+                  : 'bg-[#FFF9F5] text-[#6F6263] hover:text-[#3C3436] hover:bg-[#E3EFEB] border border-[#E8DDDA]'
               }`}
             >
               All Categories
@@ -108,10 +103,10 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    ? 'bg-[#254E4A] text-white shadow-[0_2px_8px_rgba(37,78,74,0.25)]'
+                    : 'bg-[#FFF9F5] text-[#6F6263] hover:text-[#3C3436] hover:bg-[#E3EFEB] border border-[#E8DDDA]'
                 }`}
               >
                 {cat}
@@ -124,59 +119,66 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
       {/* Task Cards Grid */}
       {filteredTasks.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredTasks.map((task) => {
+          {filteredTasks.map((task, idx) => {
             const isExpanded = expandedTaskId === task.id;
+            const isTealBadge = idx % 2 === 0;
             return (
               <div
                 key={task.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs hover:border-blue-300 dark:hover:border-blue-700 transition-all flex flex-col justify-between"
+                className="bg-white border border-[#E8DDDA] rounded-2xl overflow-hidden shadow-[0_4px_16px_rgba(60,52,54,0.04)] hover:border-[#D98F9B] hover:shadow-[0_6px_20px_rgba(60,52,54,0.08)] transition-all flex flex-col justify-between"
               >
-                <div className="p-5 space-y-3">
+                <div className="p-5 sm:p-6 space-y-3.5">
                   {/* Category & Tags Header */}
                   <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900">
+                    <span
+                      className={`font-bold text-[11px] px-2.5 py-0.5 rounded-md border ${
+                        isTealBadge
+                          ? 'bg-[#E3EFEB] text-[#254E4A] border-[#254E4A]/25'
+                          : 'bg-[#F5E2E3] text-[#D98F9B] border-[#D98F9B]/40'
+                      }`}
+                    >
                       {task.category}
                     </span>
-                    <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                    <span className="text-[#6F6263] font-mono text-[11px] font-semibold">
                       {task.difficulty}
                     </span>
                   </div>
 
                   {/* Title and summary */}
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                    <h3 className="text-base font-extrabold text-[#3C3436] leading-snug">
                       {task.title}
                     </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-[#6F6263] mt-1.5 leading-relaxed font-medium">
                       {task.summary}
                     </p>
                   </div>
 
                   {/* Prerequisites */}
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-2 rounded border border-slate-100 dark:border-slate-800">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Before starting: </span>
+                  <div className="text-[11px] text-[#6F6263] bg-[#FFF9F5] p-2.5 rounded-xl border border-[#E8DDDA]">
+                    <span className="font-bold text-[#3C3436]">Before starting: </span>
                     {task.prerequisites}
                   </div>
 
                   {/* Expanded Step Preview */}
                   {isExpanded && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 text-xs">
-                      <div className="font-semibold text-slate-700 dark:text-slate-300">
+                    <div className="pt-3 border-t border-[#E8DDDA] space-y-3 text-xs">
+                      <div className="font-extrabold text-[#3C3436]">
                         Instructions Breakdown ({task.steps.length} Steps):
                       </div>
                       <div className="space-y-2">
                         {task.steps.map((step) => (
                           <div
                             key={step.stepNumber}
-                            className="p-2.5 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-1"
+                            className="p-3 rounded-xl bg-[#FFF9F5] border border-[#E8DDDA] space-y-1"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-800 dark:text-slate-200">
+                              <span className="font-bold text-[#3C3436]">
                                 Step {step.stepNumber}: {step.title}
                               </span>
                               <ActionBadge actionType={step.actionType} size="sm" />
                             </div>
-                            <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                            <p className="text-[#6F6263] text-[11px] leading-relaxed">
                               {step.instruction}
                             </p>
                           </div>
@@ -185,15 +187,15 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
 
                       {/* Common Problems & Recovery */}
                       {task.commonProblems.length > 0 && (
-                        <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 space-y-1">
-                          <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200 text-[11px]">
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                        <div className="p-3 rounded-xl bg-[#F5E2E3] border border-[#D98F9B] space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-[#D98F9B] text-[11px]">
+                            <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2.25} />
                             <span>Common Pitfall & Recovery:</span>
                           </div>
-                          <p className="text-amber-800 dark:text-amber-300 text-[11px]">
+                          <p className="text-[#3C3436] text-[11px] font-bold">
                             {task.commonProblems[0].issue}
                           </p>
-                          <p className="text-slate-600 dark:text-slate-400 text-[11px] italic">
+                          <p className="text-[#6F6263] text-[11px] italic">
                             Solution: {task.commonProblems[0].solution}
                           </p>
                         </div>
@@ -203,23 +205,27 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="px-5 py-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                <div className="px-5 py-3.5 bg-[#FFF9F5] border-t border-[#E8DDDA] flex items-center justify-between text-xs">
                   <button
                     type="button"
                     onClick={(e) => toggleExpand(task.id, e)}
-                    className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer font-medium"
+                    className="text-[#6F6263] hover:text-[#3C3436] flex items-center gap-1 cursor-pointer font-bold transition-colors"
                   >
                     <span>{isExpanded ? 'Hide Steps' : 'Preview Steps'}</span>
-                    {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-[#254E4A]" strokeWidth={2.25} />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-[#254E4A]" strokeWidth={2.25} />
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => onSelectTask(task)}
-                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    className="px-4 py-2 rounded-xl bg-[#D98F9B] hover:bg-[#C77D89] text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_2px_8px_rgba(217,143,155,0.3)] transition-all"
                   >
                     <span>Start Guided Guide</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-4 h-4" strokeWidth={2.25} />
                   </button>
                 </div>
               </div>
@@ -227,8 +233,8 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-10 text-center space-y-3">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+        <div className="bg-white border border-[#E8DDDA] rounded-2xl p-10 text-center space-y-3 shadow-2xs">
+          <p className="text-xs sm:text-sm text-[#6F6263]">
             No guides match your search "{searchQuery}" in this category.
           </p>
           <button
@@ -237,7 +243,7 @@ export const TaskLibraryView: React.FC<TaskLibraryViewProps> = ({ onSelectTask }
               setSearchQuery('');
               setSelectedCategory('All');
             }}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+            className="text-xs text-[#254E4A] font-bold hover:underline cursor-pointer"
           >
             Clear filters and show all tasks
           </button>

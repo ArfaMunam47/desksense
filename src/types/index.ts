@@ -1,14 +1,12 @@
 export type TaskCategory =
-  | 'Browser basics'
-  | 'Downloading and managing files'
-  | 'Folders and file organization'
-  | 'Basic Windows operations'
-  | 'Display and accessibility settings'
-  | 'Bluetooth and common device settings'
-  | 'Installing and uninstalling applications safely'
-  | 'Screenshots and screen recording'
-  | 'ZIP files and document handling'
-  | 'Basic computer troubleshooting';
+  | 'Computer Basics'
+  | 'Files and Folders'
+  | 'Internet and Browsers'
+  | 'Windows Settings'
+  | 'Devices and Connectivity'
+  | 'Documents and Productivity'
+  | 'Programming and Development'
+  | 'Troubleshooting';
 
 export type ActionType =
   | 'click'
@@ -33,7 +31,7 @@ export interface Task {
   id: string;
   title: string;
   category: TaskCategory;
-  difficulty: 'First-time User' | 'Beginner' | 'Elementary';
+  difficulty: 'First-time User' | 'Beginner' | 'Elementary' | 'Intermediate';
   osContext: string;
   summary: string;
   prerequisites: string;
@@ -64,6 +62,42 @@ export interface ScreenCapture {
   dimensions?: { width: number; height: number };
 }
 
+export type CodingTaskType =
+  | 'explain_error'
+  | 'explain_code'
+  | 'terminal_output'
+  | 'env_troubleshoot'
+  | 'install_dependency'
+  | 'fix_issue'
+  | 'next_steps';
+
+export interface CodingHelpRequest {
+  taskType: CodingTaskType;
+  environment: string;
+  description: string;
+  codeSnippet?: string;
+  errorMessage?: string;
+  imageBase64?: string;
+  followUpHistory?: Array<{ role: 'user' | 'assistant'; text: string }>;
+}
+
+export interface CodingHelpResponse {
+  identifiedGoal: string;
+  problemExplanation: string;
+  likelyCauses: string[];
+  safeSolutionSummary: string;
+  isPotentiallyDestructive: boolean;
+  destructiveWarning?: string;
+  steps: GuidanceStep[];
+  codeDiffOrSnippet?: {
+    language: string;
+    description: string;
+    code: string;
+  };
+  learningTakeaway: string;
+  suggestedFollowUps?: string[];
+}
+
 export interface HistoryItem {
   id: string;
   timestamp: string;
@@ -71,16 +105,31 @@ export interface HistoryItem {
   category?: string;
   completedSteps: number;
   totalSteps: number;
-  source: 'ai_vision' | 'ai_text' | 'task_library';
+  source: 'ai_vision' | 'ai_text' | 'task_library' | 'coding_help';
   takeaway?: string;
+  codingContext?: {
+    taskType: CodingTaskType;
+    environment: string;
+    summary: string;
+  };
 }
 
 export interface AppSettings {
+  // General
+  defaultOs: 'Windows 11' | 'Windows 10' | 'macOS' | 'Linux';
+  beginnerTerminologyMode: boolean;
+  startupDestination: 'home' | 'guided' | 'tasks' | 'coding';
+  // Appearance
   theme: 'light' | 'dark' | 'system';
   fontSize: 'normal' | 'large' | 'extra-large';
   highContrast: boolean;
+  compactMode: boolean;
+  // Privacy
   confirmBeforeDiscard: boolean;
   saveHistory: boolean;
+  anonymizePathsInSnippets: boolean;
+  // Screen Capture
+  captureMethod: 'browser_prompt' | 'clipboard_default';
 }
 
 export interface ServerStatus {
@@ -93,3 +142,12 @@ export interface ServerStatus {
   platform: string;
   serverTime: string;
 }
+
+export type NavTab =
+  | 'home'
+  | 'guided'
+  | 'tasks'
+  | 'coding'
+  | 'history'
+  | 'about'
+  | 'settings';

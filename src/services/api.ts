@@ -1,4 +1,9 @@
-import { ScreenAnalysisData, ServerStatus } from '../types';
+import {
+  ScreenAnalysisData,
+  ServerStatus,
+  CodingHelpRequest,
+  CodingHelpResponse,
+} from '../types';
 
 export async function getServerStatus(): Promise<ServerStatus> {
   try {
@@ -113,6 +118,86 @@ export async function askAssistant(
     return {
       success: false,
       error: err.message || 'Network error communicating with DeskSense backend.',
+    };
+  }
+}
+
+export interface CodingHelpApiResponse {
+  success: boolean;
+  data?: CodingHelpResponse;
+  configured?: boolean;
+  error?: string;
+}
+
+export async function requestCodingHelp(
+  payload: CodingHelpRequest
+): Promise<CodingHelpApiResponse> {
+  try {
+    const res = await fetch('/api/coding-help', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        configured: data.configured !== undefined ? data.configured : true,
+        error: data.error || `Server error (${res.status})`,
+      };
+    }
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Network error communicating with DeskSense coding service.',
+    };
+  }
+}
+
+export interface FollowUpApiResponse {
+  success: boolean;
+  answer?: string;
+  configured?: boolean;
+  error?: string;
+}
+
+export async function askFollowUpQuestion(
+  context: string,
+  previousSteps: any[],
+  userFollowUp: string,
+  mode: string = 'general'
+): Promise<FollowUpApiResponse> {
+  try {
+    const res = await fetch('/api/follow-up', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        context,
+        previousSteps,
+        userFollowUp,
+        mode,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        configured: data.configured !== undefined ? data.configured : true,
+        error: data.error || `Server error (${res.status})`,
+      };
+    }
+    return data;
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || 'Network error communicating with DeskSense follow-up service.',
     };
   }
 }

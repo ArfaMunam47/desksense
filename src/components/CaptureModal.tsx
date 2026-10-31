@@ -104,50 +104,50 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#3C3436]/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl shadow-[0_16px_50px_rgba(37,78,74,0.18)] border border-[#E8DDDA] w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/80">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Camera className="w-4 h-4" />
+        <div className="px-6 py-4 border-b border-[#E8DDDA] flex items-center justify-between bg-[#FFF9F5]">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#254E4A] text-white flex items-center justify-center shadow-xs">
+              <Camera className="w-4.5 h-4.5 text-white" strokeWidth={2.25} />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-extrabold text-[#3C3436]">
                 Authorize Screen Capture
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[#6F6263]">
                 Explicit single snapshot • No continuous background recording
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl hover:bg-[#F5E2E3] text-[#6F6263] hover:text-[#3C3436] flex items-center justify-center transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={2.25} />
           </button>
         </div>
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5">
-          {/* Privacy Reassurance Banner */}
-          <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-lg p-3 text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          {/* Privacy Reassurance Banner with Deep Teal */}
+          <div className="bg-[#E3EFEB] border border-[#254E4A]/25 rounded-xl p-3.5 text-xs text-[#3C3436] flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-[#254E4A] shrink-0 mt-0.5" strokeWidth={2.25} />
             <div className="space-y-0.5">
-              <p className="font-semibold">Privacy First & User-Controlled</p>
-              <p className="text-emerald-800/90 dark:text-emerald-300/80">
+              <p className="font-extrabold text-[#254E4A]">Privacy First & User-Controlled</p>
+              <p className="text-[#3C3436] leading-relaxed">
                 DeskSense captures only a single frame when you approve it. Screen sharing stops immediately once the picture is taken. Sensitive data is never monitored in the background.
               </p>
             </div>
           </div>
 
           {error && (
-            <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="bg-[#F5E2E3] border border-[#D98F9B] rounded-xl p-3.5 text-xs text-[#3C3436] flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-[#D98F9B] shrink-0 mt-0.5" strokeWidth={2.25} />
               <div>
-                <p className="font-medium">Notice</p>
-                <p>{error}</p>
+                <p className="font-bold">Notice</p>
+                <p className="text-[#6F6263]">{error}</p>
               </div>
             </div>
           )}
@@ -155,19 +155,19 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
           {/* Screen preview state */}
           {previewCapture ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                <span className="font-medium flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-between text-xs text-[#6F6263]">
+                <span className="font-bold flex items-center gap-1.5 text-[#254E4A]">
+                  <CheckCircle2 className="w-4 h-4 text-[#254E4A]" strokeWidth={2.25} />
                   Screenshot Ready for Analysis
                 </span>
                 {previewCapture.dimensions && (
-                  <span className="font-mono text-[11px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  <span className="font-mono text-[11px] bg-[#FFF9F5] text-[#3C3436] px-2.5 py-0.5 rounded-md border border-[#E8DDDA] font-semibold">
                     {previewCapture.dimensions.width} × {previewCapture.dimensions.height} px
                   </span>
                 )}
               </div>
 
-              <div className="relative rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-950 max-h-72 flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden border border-[#E8DDDA] bg-[#3C3436]/5 max-h-72 flex items-center justify-center shadow-inner">
                 <img
                   src={previewCapture.dataUrl}
                   alt="Captured screen preview"
@@ -179,9 +179,9 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                 <button
                   type="button"
                   onClick={handleDiscard}
-                  className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-[#D98F9B] hover:underline flex items-center gap-1 cursor-pointer font-bold"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5" strokeWidth={2.25} />
                   Discard and Remove
                 </button>
 
@@ -190,15 +190,15 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                     type="button"
                     onClick={handleStartBrowserCapture}
                     disabled={isCapturing}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl border border-[#E8DDDA] text-xs font-bold text-[#3C3436] hover:bg-[#FFF9F5] flex items-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isCapturing ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isCapturing ? 'animate-spin' : ''}`} strokeWidth={2.25} />
                     Capture Again
                   </button>
                   <button
                     type="button"
                     onClick={handleConfirm}
-                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-[#D98F9B] hover:bg-[#C77D89] text-white text-xs font-bold flex items-center gap-1.5 shadow-[0_2px_8px_rgba(217,143,155,0.3)] cursor-pointer transition-all"
                   >
                     Use This Screenshot
                   </button>
@@ -207,35 +207,35 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="text-center py-4 px-2 space-y-2">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <div className="text-center py-2 px-2 space-y-1.5">
+                <h3 className="text-sm font-bold text-[#3C3436]">
                   How DeskSense uses your screen
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                <p className="text-xs text-[#6F6263] max-w-md mx-auto leading-relaxed">
                   When you ask a question like <em>"How do I download this picture?"</em>, seeing your screen allows DeskSense to point to the exact menu or button on your screen without guessing.
                 </p>
               </div>
 
-              {/* Main Capture Button */}
-              <div className="flex flex-col items-center justify-center border-2 border-dashed border-blue-300 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl p-6 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
-                  <Camera className="w-6 h-6" />
+              {/* Main Capture Button Box */}
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-[#D98F9B] bg-[#FFF9F5] rounded-2xl p-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#D98F9B] text-white flex items-center justify-center shadow-[0_4px_12px_rgba(217,143,155,0.3)]">
+                  <Camera className="w-6 h-6" strokeWidth={2.25} />
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="space-y-0.5">
+                  <h4 className="text-sm font-bold text-[#3C3436]">
                     Capture Window or Screen
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Your browser will ask which window or screen you want to share.
+                  <p className="text-xs text-[#6F6263]">
+                    Your browser will prompt which window or screen you wish to share.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleStartBrowserCapture}
                   disabled={isCapturing}
-                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-medium transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="px-5 py-2.5 rounded-xl bg-[#D98F9B] hover:bg-[#C77D89] text-white text-xs sm:text-sm font-bold transition-all shadow-[0_3px_10px_rgba(217,143,155,0.3)] flex items-center gap-2 cursor-pointer disabled:opacity-60"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4" strokeWidth={2.25} />
                   <span>{isCapturing ? 'Waiting for Selection...' : 'Capture Screen Now'}</span>
                 </button>
               </div>
@@ -243,25 +243,25 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
               {/* Alternative methods: Paste / Upload */}
               <div className="pt-2">
                 <div className="relative flex py-2 items-center">
-                  <div className="grow border-t border-slate-200 dark:border-slate-800" />
-                  <span className="shrink mx-3 text-[11px] text-slate-400 font-medium uppercase tracking-wider">
+                  <div className="grow border-t border-[#E8DDDA]" />
+                  <span className="shrink mx-3 text-[11px] text-[#6F6263] font-bold uppercase tracking-wider">
                     Or alternative methods
                   </span>
-                  <div className="grow border-t border-slate-200 dark:border-slate-800" />
+                  <div className="grow border-t border-[#E8DDDA]" />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                   {/* Paste Box */}
-                  <div className="p-3 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
-                      <Clipboard className="w-4 h-4" />
+                  <div className="p-3 border border-[#E8DDDA] rounded-xl bg-[#FFF9F5] flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#E3EFEB] text-[#254E4A] flex items-center justify-center shrink-0 border border-[#254E4A]/20">
+                      <Clipboard className="w-4 h-4" strokeWidth={2.25} />
                     </div>
                     <div className="text-xs">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      <p className="font-bold text-[#3C3436]">
                         Paste Clipboard (Ctrl + V)
                       </p>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">
-                        Press Win+Shift+S, snip, then press Ctrl+V here.
+                      <p className="text-[#6F6263] text-[11px]">
+                        Press Win+Shift+S, then Ctrl+V here.
                       </p>
                     </div>
                   </div>
@@ -269,17 +269,17 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
                   {/* Upload Image File */}
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-3 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-800/40 flex items-center gap-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="p-3 border border-[#E8DDDA] rounded-xl bg-[#FFF9F5] flex items-center gap-3 cursor-pointer hover:bg-[#F5E2E3]/50 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
-                      <Upload className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-lg bg-[#F5E2E3] text-[#D98F9B] flex items-center justify-center shrink-0 border border-[#D98F9B]/30">
+                      <Upload className="w-4 h-4" strokeWidth={2.25} />
                     </div>
                     <div className="text-xs">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      <p className="font-bold text-[#3C3436]">
                         Upload Screenshot File
                       </p>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">
-                        Select a .PNG or .JPG image from your computer.
+                      <p className="text-[#6F6263] text-[11px]">
+                        Select a .PNG or .JPG image file.
                       </p>
                     </div>
                     <input
@@ -297,14 +297,14 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex items-center justify-between text-xs">
-          <span className="text-slate-500 dark:text-slate-400">
+        <div className="px-6 py-3 border-t border-[#E8DDDA] bg-[#FFF9F5] flex items-center justify-between text-xs">
+          <span className="text-[#6F6263] font-medium">
             DeskSense Privacy Guarantee
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg text-[#3C3436] hover:bg-[#E8DDDA] transition-colors cursor-pointer font-bold"
           >
             Cancel
           </button>

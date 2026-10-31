@@ -1,14 +1,24 @@
 import { AppSettings, HistoryItem } from '../types';
 
-const SETTINGS_KEY = 'desksense_settings_v1';
-const HISTORY_KEY = 'desksense_history_v1';
+const SETTINGS_KEY = 'desksense_settings_v2';
+const HISTORY_KEY = 'desksense_history_v2';
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  // General
+  defaultOs: 'Windows 11',
+  beginnerTerminologyMode: true,
+  startupDestination: 'home',
+  // Appearance
   theme: 'system',
   fontSize: 'normal',
   highContrast: false,
+  compactMode: false,
+  // Privacy
   confirmBeforeDiscard: true,
   saveHistory: true,
+  anonymizePathsInSnippets: true,
+  // Screen Capture
+  captureMethod: 'browser_prompt',
 };
 
 export function loadSettings(): AppSettings {

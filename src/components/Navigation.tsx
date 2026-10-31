@@ -1,35 +1,74 @@
 import React from 'react';
-import { Home, Compass, BookOpen, History, Settings } from 'lucide-react';
-
-export type NavTab = 'home' | 'guided' | 'tasks' | 'history' | 'settings';
+import {
+  Home,
+  Compass,
+  BookOpen,
+  Code2,
+  History,
+  Info,
+  Settings,
+} from 'lucide-react';
+import { NavTab } from '../types';
 
 interface NavigationProps {
   currentTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   hasActiveTask: boolean;
+  hasActiveCoding: boolean;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
   currentTab,
   onSelectTab,
   hasActiveTask,
+  hasActiveCoding,
 }) => {
   const navItems = [
-    { id: 'home' as NavTab, label: 'Home', icon: Home },
+    {
+      id: 'home' as NavTab,
+      label: 'Home',
+      icon: Home,
+    },
     {
       id: 'guided' as NavTab,
       label: 'Guided Help',
       icon: Compass,
       badge: hasActiveTask ? 'Active' : null,
     },
-    { id: 'tasks' as NavTab, label: 'Task Library', icon: BookOpen },
-    { id: 'history' as NavTab, label: 'History', icon: History },
-    { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
+    {
+      id: 'tasks' as NavTab,
+      label: 'Task Library',
+      icon: BookOpen,
+    },
+    {
+      id: 'coding' as NavTab,
+      label: 'Coding Help',
+      icon: Code2,
+      badge: hasActiveCoding ? 'Ready' : null,
+    },
+    {
+      id: 'history' as NavTab,
+      label: 'History',
+      icon: History,
+    },
+    {
+      id: 'about' as NavTab,
+      label: 'About',
+      icon: Info,
+    },
+    {
+      id: 'settings' as NavTab,
+      label: 'Settings',
+      icon: Settings,
+    },
   ];
 
   return (
-    <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between">
-      <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-1.5 scrollbar-none">
+    <nav
+      className="bg-white border-b border-[#E8DDDA] px-4 sm:px-6 flex items-center justify-between shadow-[0_2px_8px_rgba(60,52,54,0.03)]"
+      aria-label="Main Navigation"
+    >
+      <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto py-2.5 scrollbar-none">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
@@ -37,26 +76,29 @@ export const Navigation: React.FC<NavigationProps> = ({
             <button
               key={item.id}
               onClick={() => onSelectTab(item.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 shadow-xs border border-blue-200 dark:border-blue-800'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent'
+                  ? 'bg-[#F5E2E3] text-[#3C3436] font-bold shadow-2xs border border-[#D98F9B]'
+                  : 'text-[#6F6263] hover:text-[#3C3436] hover:bg-[#FFF9F5] border border-transparent'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
+              <Icon
+                className={`w-4.5 h-4.5 ${isActive ? 'text-[#D98F9B]' : 'text-[#6F6263]'}`}
+                strokeWidth={2.25}
+              />
               <span>{item.label}</span>
               {item.badge && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+                <span className="w-2 h-2 rounded-full bg-[#D98F9B] animate-pulse ml-0.5" />
               )}
             </button>
           );
         })}
       </div>
 
-      <div className="hidden lg:flex items-center text-xs text-slate-500 dark:text-slate-400 gap-1.5">
-        <span className="font-medium text-slate-700 dark:text-slate-300">DeskSense</span>
-        <span>•</span>
-        <span>"Learn your computer with confidence"</span>
+      <div className="hidden lg:flex items-center text-xs text-[#6F6263] gap-2">
+        <span className="font-extrabold text-[#3C3436]">DeskSense</span>
+        <span className="text-[#E8DDDA]">|</span>
+        <span className="text-[#254E4A] font-medium">Learn your computer with confidence.</span>
       </div>
     </nav>
   );
