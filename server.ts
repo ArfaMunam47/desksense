@@ -30,6 +30,53 @@ const ai = apiKey
     })
   : null;
 
+// Clean helper to format API errors into plain, human-friendly messages
+function formatErrorMessage(error: any, fallback: string): string {
+  let msg = error?.message || fallback;
+  try {
+    const parsed = JSON.parse(msg);
+    if (parsed?.error?.message) {
+      msg = parsed.error.message;
+    }
+  } catch {}
+
+  if (
+    msg.includes('503') ||
+    msg.toLowerCase().includes('high demand') ||
+    msg.includes('UNAVAILABLE')
+  ) {
+    return 'The AI assistant is experiencing a temporary spike in demand. Please try again in a few moments, or explore verified guides in the Task Library.';
+  }
+  return msg;
+}
+
+// Helper to generate content with fallback when primary model experiences high demand
+async function generateWithFallback(aiClient: any, request: any) {
+  const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+  let lastErr = null;
+  for (const model of candidateModels) {
+    try {
+      return await aiClient.models.generateContent({
+        ...request,
+        model,
+      });
+    } catch (err: any) {
+      lastErr = err;
+      const isUnavailable =
+        err?.status === 503 ||
+        err?.message?.includes('503') ||
+        err?.message?.includes('high demand') ||
+        err?.message?.includes('UNAVAILABLE');
+      if (isUnavailable) {
+        console.warn(`Model ${model} temporarily unavailable. Trying next candidate model...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 // System status endpoint
 app.get('/api/status', (_req, res) => {
   res.json({
@@ -84,8 +131,7 @@ Analyze the provided screenshot carefully:
 6. Rate your confidence honestly (high, medium, low, or needs_clarification). If uncertain, explain why and ask for clarification. Do NOT hallucinate buttons that aren't there.
 7. Include a reassuring computer literacy takeaway.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithFallback(ai, {
       contents: {
         parts: [
           {
@@ -188,7 +234,7 @@ If you cannot see the required button or window, state that clearly and tell the
   } catch (error: any) {
     console.error('Error analyzing screen:', error);
     return res.status(500).json({
-      error: error.message || 'Failed to analyze screen capture. Please try again.',
+      error: formatErrorMessage(error, 'Failed to analyze screen capture. Please try again.'),
     });
   }
 });
@@ -220,8 +266,7 @@ Keep instructions very concrete (e.g. "Look at the bottom left corner for the Wi
 Avoid jargon.
 Return a structured response.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithFallback(ai, {
       contents: promptText,
       config: {
         systemInstruction: `You are DeskSense, an empathetic computer literacy guide for beginners. Never make the user feel foolish for asking a basic question. Always assume Windows 11 unless specified otherwise. Keep steps sequential, short, and calm.`,
@@ -272,7 +317,7 @@ Return a structured response.`;
   } catch (error: any) {
     console.error('Error answering question:', error);
     return res.status(500).json({
-      error: error.message || 'Failed to process question. Please try again.',
+      error: formatErrorMessage(error, 'Failed to process question. Please try again.'),
     });
   }
 });
@@ -357,8 +402,7 @@ Perform the following 6 requirements:
       text: promptText,
     });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithFallback(ai, {
       contents: { parts: contentsParts },
       config: {
         systemInstruction: `You are DeskSense Coding Mentor, a patient, safety-minded programming tutor.
@@ -449,7 +493,7 @@ Always prioritize safety, explain potential risks of commands, and keep instruct
   } catch (error: any) {
     console.error('Error generating coding help:', error);
     return res.status(500).json({
-      error: error.message || 'Failed to process coding query. Please try again.',
+      error: formatErrorMessage(error, 'Failed to process coding query. Please try again.'),
     });
   }
 });
@@ -487,8 +531,7 @@ If the user is asking to clarify a specific step or says they don't understand, 
 If they are asking "what if...", explain calmly.
 Keep your response concise, empathetic, and actionable.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithFallback(ai, {
       contents: promptText,
       config: {
         systemInstruction: `You are DeskSense, an empathetic computer mentor. Answer follow-up questions concisely and calmly. Do not repeat greeting fluff. Focus directly on answering the user's specific point of confusion.`,
@@ -502,7 +545,7 @@ Keep your response concise, empathetic, and actionable.`;
   } catch (error: any) {
     console.error('Error answering follow-up:', error);
     return res.status(500).json({
-      error: error.message || 'Failed to process follow-up question.',
+      error: formatErrorMessage(error, 'Failed to process follow-up question. Please try again.'),
     });
   }
 });

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { TitleBar } from './components/TitleBar';
-import { Navigation } from './components/Navigation';
+import { Sidebar } from './components/Sidebar';
 import { CaptureModal } from './components/CaptureModal';
+import { FloatingAssistant } from './components/FloatingAssistant';
 import { HomeView } from './views/HomeView';
 import { GuidedHelpView } from './views/GuidedHelpView';
 import { TaskLibraryView } from './views/TaskLibraryView';
@@ -266,106 +267,141 @@ export default function App() {
     }
   };
 
+  const pageTitles: Record<NavTab, string> = {
+    home: 'Home',
+    guided: 'Get Help',
+    tasks: 'Task Library',
+    coding: 'Coding Help',
+    history: 'Activity',
+    about: 'About DeskSense',
+    settings: 'Settings',
+  };
+
   return (
     <div
-      className={`min-h-screen bg-[#FFF9F5] text-[#3C3436] flex flex-col font-sans transition-colors ${getFontScaleClass()} ${
+      className={`h-screen w-screen overflow-hidden bg-[#F4F4F1] text-[#303B38] flex flex-row font-sans transition-colors ${getFontScaleClass()} ${
         settings.highContrast ? 'contrast-115' : ''
       }`}
     >
-      {/* TitleBar resembling soft desktop window frame */}
-      <TitleBar
-        status={serverStatus}
-        onQuickCapture={() => setIsCaptureModalOpen(true)}
-        hasActiveCapture={Boolean(capture)}
-      />
-
-      {/* Main App Navigation - 7 Destinations in two-accent system */}
-      <Navigation
+      {/* 1. Left Vertical Desktop Sidebar Navigation */}
+      <Sidebar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         hasActiveTask={activeSteps.length > 0 && currentStepIndex < activeSteps.length}
         hasActiveCoding={false}
+        onQuickCapture={() => setIsCaptureModalOpen(true)}
+        hasActiveCapture={Boolean(capture)}
       />
 
-      {/* View Content */}
-      <main className="grow">
-        {currentTab === 'home' && (
-          <HomeView
-            onAskQuestion={handleAskQuestion}
-            onOpenCapture={() => setIsCaptureModalOpen(true)}
-            onSelectTask={handleSelectTask}
-            onNavigateToTasks={() => setCurrentTab('tasks')}
-            onNavigateToCoding={() => setCurrentTab('coding')}
-            currentCapture={capture}
-          />
-        )}
+      {/* 2. Main Content Viewport Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F4F4F1]">
+        {/* Minimal Desktop Window TitleBar */}
+        <TitleBar
+          status={serverStatus}
+          onQuickCapture={() => setIsCaptureModalOpen(true)}
+          hasActiveCapture={Boolean(capture)}
+          currentPageTitle={pageTitles[currentTab]}
+        />
 
-        {currentTab === 'guided' && (
-          <GuidedHelpView
-            question={question}
-            onUpdateQuestion={(newQ) => handleAskQuestion(newQ)}
-            capture={capture}
-            onOpenCapture={() => setIsCaptureModalOpen(true)}
-            onDiscardCapture={handleDiscardCapture}
-            analysisData={analysisData}
-            activeSteps={activeSteps}
-            currentStepIndex={currentStepIndex}
-            isLoading={isLoading}
-            errorMessage={errorMessage}
-            onNextStep={handleNextStep}
-            onPrevStep={handlePrevStep}
-            onJumpToStep={handleJumpToStep}
-            onCompleteTask={handleCompleteTask}
-            onTriggerAnalysis={() => {
-              if (capture && question) {
-                performScreenAnalysis(capture.dataUrl, question);
-              } else if (question) {
-                handleAskQuestion(question);
-              } else {
-                setIsCaptureModalOpen(true);
-              }
-            }}
-          />
-        )}
+        {/* Scrollable View Content Area */}
+        <main className="flex-1 overflow-y-auto">
+          {currentTab === 'home' && (
+            <HomeView
+              onAskQuestion={handleAskQuestion}
+              onOpenCapture={() => setIsCaptureModalOpen(true)}
+              onSelectTask={handleSelectTask}
+              onNavigateToTasks={() => setCurrentTab('tasks')}
+              onNavigateToCoding={() => setCurrentTab('coding')}
+              currentCapture={capture}
+            />
+          )}
 
-        {currentTab === 'tasks' && (
-          <TaskLibraryView onSelectTask={handleSelectTask} />
-        )}
+          {currentTab === 'guided' && (
+            <GuidedHelpView
+              question={question}
+              onUpdateQuestion={(newQ) => handleAskQuestion(newQ)}
+              capture={capture}
+              onOpenCapture={() => setIsCaptureModalOpen(true)}
+              onDiscardCapture={handleDiscardCapture}
+              analysisData={analysisData}
+              activeSteps={activeSteps}
+              currentStepIndex={currentStepIndex}
+              isLoading={isLoading}
+              errorMessage={errorMessage}
+              onNextStep={handleNextStep}
+              onPrevStep={handlePrevStep}
+              onJumpToStep={handleJumpToStep}
+              onCompleteTask={handleCompleteTask}
+              onTriggerAnalysis={() => {
+                if (capture && question) {
+                  performScreenAnalysis(capture.dataUrl, question);
+                } else if (question) {
+                  handleAskQuestion(question);
+                } else {
+                  setIsCaptureModalOpen(true);
+                }
+              }}
+            />
+          )}
 
-        {currentTab === 'coding' && (
-          <CodingHelpView
-            onOpenCapture={() => setIsCaptureModalOpen(true)}
-            currentCapture={capture}
-            onDiscardCapture={handleDiscardCapture}
-            onSaveToHistory={handleSaveCodingHistory}
-          />
-        )}
+          {currentTab === 'tasks' && (
+            <TaskLibraryView onSelectTask={handleSelectTask} />
+          )}
 
-        {currentTab === 'history' && (
-          <HistoryView
-            onResumeQuestion={(q) => handleAskQuestion(q)}
-            onNavigateToCoding={() => setCurrentTab('coding')}
-          />
-        )}
+          {currentTab === 'coding' && (
+            <CodingHelpView
+              onOpenCapture={() => setIsCaptureModalOpen(true)}
+              currentCapture={capture}
+              onDiscardCapture={handleDiscardCapture}
+              onSaveToHistory={handleSaveCodingHistory}
+            />
+          )}
 
-        {currentTab === 'about' && (
-          <AboutView
-            serverStatus={serverStatus}
-            onNavigateToTasks={() => setCurrentTab('tasks')}
-            onNavigateToCoding={() => setCurrentTab('coding')}
-          />
-        )}
+          {currentTab === 'history' && (
+            <HistoryView
+              onResumeQuestion={(q) => handleAskQuestion(q)}
+              onNavigateToCoding={() => setCurrentTab('coding')}
+            />
+          )}
 
-        {currentTab === 'settings' && (
-          <SettingsView
-            settings={settings}
-            onUpdateSettings={handleUpdateSettings}
-            serverStatus={serverStatus}
-            onRefreshStatus={checkStatus}
-            onClearAllData={handleClearAllData}
-          />
-        )}
-      </main>
+          {currentTab === 'about' && (
+            <AboutView
+              serverStatus={serverStatus}
+              onNavigateToTasks={() => setCurrentTab('tasks')}
+              onNavigateToCoding={() => setCurrentTab('coding')}
+            />
+          )}
+
+          {currentTab === 'settings' && (
+            <SettingsView
+              settings={settings}
+              onUpdateSettings={handleUpdateSettings}
+              serverStatus={serverStatus}
+              onRefreshStatus={checkStatus}
+              onClearAllData={handleClearAllData}
+            />
+          )}
+        </main>
+
+        {/* Minimal Footer Status Bar */}
+        <footer className="h-6 bg-[#FFFFFF] border-t border-[#E2E4DF] px-4 text-[10px] text-[#727A75] flex items-center justify-between select-none shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-[#303B38]">DeskSense</span>
+            <span>|</span>
+            <span className="font-medium text-[#727A75]">Designed &amp; Developed by Arfa Munam</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[#355C4B] font-bold flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#355C4B]" />
+              <span>User-Authorized Observation</span>
+            </span>
+            <span>•</span>
+            <span className="font-mono text-[10px] text-[#727A75]">
+              {serverStatus?.platform || 'Web Environment (Desktop Bridge Ready)'}
+            </span>
+          </div>
+        </footer>
+      </div>
 
       {/* Screen Capture Modal Dialog */}
       <CaptureModal
@@ -384,22 +420,13 @@ export default function App() {
         onDiscardCapture={handleDiscardCapture}
       />
 
-      {/* Desktop App Status Bar in Clean White with Deep Teal accent */}
-      <footer className="h-7 bg-white border-t border-[#E8DDDA] px-4 text-[11px] text-[#6F6263] flex items-center justify-between select-none">
-        <div className="flex items-center gap-2">
-          <span className="font-extrabold text-[#3C3436]">DeskSense</span>
-          <span>•</span>
-          <span className="text-[#254E4A] font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#254E4A]" />
-            <span>User-Authorized Observation</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] text-[#6F6263] font-medium">
-            {serverStatus?.platform || 'Web Environment (Desktop Bridge Ready)'}
-          </span>
-        </div>
-      </footer>
+      {/* Floating AI Companion available everywhere */}
+      <FloatingAssistant
+        onOpenCapture={() => setIsCaptureModalOpen(true)}
+        currentCapture={capture}
+        onDiscardCapture={handleDiscardCapture}
+        defaultOs={settings.defaultOs}
+      />
     </div>
   );
 }

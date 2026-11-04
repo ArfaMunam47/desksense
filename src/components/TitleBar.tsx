@@ -1,93 +1,67 @@
 import React from 'react';
-import { Monitor, Camera, Shield, Minus, Square, X } from 'lucide-react';
+import { Minus, Square, X, Camera } from 'lucide-react';
 import { ServerStatus } from '../types';
 
 interface TitleBarProps {
   status: ServerStatus | null;
-  onQuickCapture: () => void;
+  onQuickCapture?: () => void;
   hasActiveCapture: boolean;
+  currentPageTitle?: string;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
   status,
   onQuickCapture,
   hasActiveCapture,
+  currentPageTitle,
 }) => {
   return (
-    <header className="h-10 bg-[#FFF9F5] border-b border-[#E8DDDA] text-[#3C3436] flex items-center justify-between px-4 select-none text-xs font-sans transition-colors">
-      {/* Left: App Identity with Strong Brand Mark */}
-      <div className="flex items-center gap-2.5">
-        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-[#254E4A] text-white font-bold shadow-[0_1px_4px_rgba(37,78,74,0.3)]">
-          <Monitor className="w-3.5 h-3.5 text-white" strokeWidth={2.25} />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-extrabold text-[#3C3436] tracking-tight text-sm">DeskSense</span>
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#E3EFEB] text-[#254E4A] border border-[#254E4A]/25">
-            v0.9.0
-          </span>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-1.5 ml-3 pl-3 border-l border-[#E8DDDA] text-[11px] text-[#6F6263]">
-          <Shield className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />
-          <span className="font-medium">Zero Background Recording</span>
-        </div>
+    <header className="h-9 bg-[#FFFFFF] border-b border-[#E2E4DF] text-[#303B38] flex items-center justify-between px-4 select-none text-xs font-sans shrink-0">
+      {/* Left: Window Title or Location */}
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-[#727A75] text-[11px] tracking-wide">
+          DeskSense
+        </span>
+        {currentPageTitle && (
+          <>
+            <span className="text-[#E2E4DF]">•</span>
+            <span className="font-semibold text-[#303B38] text-[11px]">
+              {currentPageTitle}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Center: System Status */}
-      <div className="hidden md:flex items-center gap-2 text-[11px]">
-        {status?.aiConfigured ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E3EFEB] text-[#254E4A] border border-[#254E4A]/20 font-semibold shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-[#254E4A] animate-pulse" />
-            <span>AI Screen Vision Active</span>
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white text-[#6F6263] border border-[#E8DDDA] font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#6F6263]" />
-            <span>Task Library & Local Mode</span>
-          </span>
-        )}
-
+      {/* Right: Window Controls */}
+      <div className="flex items-center gap-2">
         {hasActiveCapture && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F5E2E3] text-[#D98F9B] border border-[#D98F9B] font-bold">
-            <Camera className="w-3.5 h-3.5 text-[#D98F9B]" strokeWidth={2.25} />
-            <span>Screenshot Attached</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#DDEBDD] text-[#355C4B] border border-[#A9C9AD] text-[10px] font-bold shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)]">
+            <Camera className="w-3.5 h-3.5 text-[#355C4B]" strokeWidth={2.6} />
+            <span>Screen Attached</span>
           </span>
         )}
-      </div>
 
-      {/* Right: Quick Capture Action & Window Controls */}
-      <div className="flex items-center gap-2.5">
-        <button
-          onClick={onQuickCapture}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#E3EFEB] hover:bg-[#D4E8E2] active:bg-[#C2DCD4] text-[#254E4A] transition-all border border-[#254E4A]/30 text-xs font-bold cursor-pointer shadow-2xs"
-          title="Capture screen now (User-Authorized)"
-        >
-          <Camera className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />
-          <span className="hidden sm:inline">Capture Screen</span>
-        </button>
-
-        {/* Desktop window controls */}
-        <div className="flex items-center text-[#6F6263] ml-1">
+        <div className="flex items-center text-[#727A75] ml-1 gap-0.5">
           <button
-            className="w-7 h-7 flex items-center justify-center hover:bg-[#E8DDDA] rounded-md transition-colors"
+            className="w-6.5 h-6.5 flex items-center justify-center hover:bg-[#ECEDE9] rounded-md transition-colors"
             title="Minimize"
             aria-label="Minimize"
           >
-            <Minus className="w-3.5 h-3.5" strokeWidth={2.25} />
+            <Minus className="w-3.5 h-3.5" strokeWidth={2.6} />
           </button>
           <button
-            className="w-7 h-7 flex items-center justify-center hover:bg-[#E8DDDA] rounded-md transition-colors"
+            className="w-6.5 h-6.5 flex items-center justify-center hover:bg-[#ECEDE9] rounded-md transition-colors"
             title="Maximize"
             aria-label="Maximize"
           >
-            <Square className="w-3 h-3" strokeWidth={2.25} />
+            <Square className="w-3 h-3" strokeWidth={2.6} />
           </button>
           <button
-            className="w-7 h-7 flex items-center justify-center hover:bg-[#D98F9B] hover:text-white rounded-md transition-colors"
+            className="w-6.5 h-6.5 flex items-center justify-center hover:bg-[#F1DDE0] hover:text-[#B96F7D] rounded-md transition-colors"
             title="Close"
             aria-label="Close"
           >
-            <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+            <X className="w-3.5 h-3.5" strokeWidth={2.6} />
           </button>
         </div>
       </div>

@@ -18,51 +18,51 @@ export const ActionBadge: React.FC<ActionBadgeProps> = ({
       case 'right_click':
         return {
           label: 'Right-Click',
-          icon: <MousePointerClick className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />,
-          bg: 'bg-[#E3EFEB] border-[#254E4A]/30 text-[#254E4A]',
+          icon: <MousePointerClick className="w-4 h-4 text-[#355C4B]" strokeWidth={2.65} />,
+          bg: 'bg-[#DDEBDD] border-[#A9C9AD] text-[#355C4B]',
           hint: 'Press the right mouse button or two-finger tap',
         };
       case 'double_click':
         return {
           label: 'Double-Click',
-          icon: <MousePointerClick className="w-3.5 h-3.5 text-[#D98F9B]" strokeWidth={2.25} />,
-          bg: 'bg-[#F5E2E3] border-[#D98F9B] text-[#3C3436]',
+          icon: <MousePointerClick className="w-4 h-4 text-[#65517E]" strokeWidth={2.65} />,
+          bg: 'bg-[#E8E2F1] border-[#C8BFD8] text-[#65517E]',
           hint: 'Click twice quickly with the left button',
         };
       case 'click':
         return {
           label: 'Click',
-          icon: <MousePointer className="w-3.5 h-3.5 text-[#D98F9B]" strokeWidth={2.25} />,
-          bg: 'bg-[#F5E2E3] border-[#D98F9B] text-[#3C3436]',
+          icon: <MousePointer className="w-4 h-4 text-[#355C4B]" strokeWidth={2.65} />,
+          bg: 'bg-[#DDEBDD] border-[#A9C9AD] text-[#355C4B]',
           hint: 'Click once with the left mouse button',
         };
       case 'shortcut':
         return {
           label: 'Keyboard Shortcut',
-          icon: <Keyboard className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />,
-          bg: 'bg-[#E3EFEB] border-[#254E4A]/30 text-[#254E4A]',
+          icon: <Keyboard className="w-4 h-4 text-[#303B38]" strokeWidth={2.65} />,
+          bg: 'bg-[#F4E3D6] border-[#E4CCBC] text-[#303B38]',
           hint: 'Press these keys together on your keyboard',
         };
       case 'type':
         return {
           label: 'Type Text',
-          icon: <Keyboard className="w-3.5 h-3.5 text-[#D98F9B]" strokeWidth={2.25} />,
-          bg: 'bg-white border-[#D98F9B] text-[#3C3436]',
+          icon: <Keyboard className="w-4 h-4 text-[#355C4B]" strokeWidth={2.65} />,
+          bg: 'bg-[#FFFFFF] border-[#E2E4DF] text-[#303B38]',
           hint: 'Type on your keyboard then press Enter',
         };
       case 'drag':
         return {
           label: 'Click & Drag',
-          icon: <MoveHorizontal className="w-3.5 h-3.5 text-[#254E4A]" strokeWidth={2.25} />,
-          bg: 'bg-[#E3EFEB] border-[#254E4A]/30 text-[#254E4A]',
+          icon: <MoveHorizontal className="w-4 h-4 text-[#B96F7D]" strokeWidth={2.65} />,
+          bg: 'bg-[#F1DDE0] border-[#DFC0C7] text-[#B96F7D]',
           hint: 'Hold mouse button down while moving',
         };
       case 'look':
       default:
         return {
           label: 'Look For',
-          icon: <Eye className="w-3.5 h-3.5 text-[#6F6263]" strokeWidth={2.25} />,
-          bg: 'bg-white border-[#E8DDDA] text-[#3C3436]',
+          icon: <Eye className="w-4 h-4 text-[#727A75]" strokeWidth={2.65} />,
+          bg: 'bg-[#ECEDE9] border-[#E2E4DF] text-[#303B38]',
           hint: 'Locate this item on your screen first',
         };
     }
@@ -80,7 +80,7 @@ export const ActionBadge: React.FC<ActionBadgeProps> = ({
         <span>{config.label}</span>
       </span>
       {targetElement && (
-        <span className="text-xs font-mono font-bold text-[#3C3436] bg-white px-2.5 py-0.5 rounded-lg border border-[#E8DDDA] shadow-2xs">
+        <span className="text-xs font-mono font-bold text-[#303B38] bg-[#FFFFFF] px-2.5 py-0.5 rounded-lg border border-[#E2E4DF] shadow-2xs">
           Target: {targetElement}
         </span>
       )}
