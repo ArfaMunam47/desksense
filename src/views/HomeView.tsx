@@ -143,7 +143,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* 1. Computer Basics */}
           <div
             onClick={() => handleCategoryClick('Computer Basics')}
-            className="bg-[#DDEBDD] border border-[#A9C9AD]/80 hover:border-[#355C4B] rounded-2xl p-5 transition-all cursor-pointer group flex flex-col justify-between space-y-4 shadow-[0_2px_8px_rgba(53,92,75,0.06)] hover:shadow-[0_4px_12px_rgba(53,92,75,0.12)]"
+            className="bg-[#DDEBDD] border border-[#A9C9AD] hover:border-[#355C4B] rounded-2xl p-5 transition-all cursor-pointer group flex flex-col justify-between space-y-4 shadow-[0_2px_8px_rgba(53,92,75,0.06)] hover:shadow-[0_4px_12px_rgba(53,92,75,0.12)]"
           >
             <div className="space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-[#FFFFFF] text-[#355C4B] flex items-center justify-center border border-[#A9C9AD]/60 shadow-[inset_0_1px_1px_rgba(255,255,255,1),0_2px_6px_rgba(53,92,75,0.12)] group-hover:scale-105 transition-transform">
@@ -158,7 +158,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </p>
               </div>
             </div>
-            <div className="pt-2 border-t border-[#A9C9AD]/30 flex items-center justify-between text-[11px] text-[#355C4B] font-bold">
+            <div className="pt-2 border-t border-[#A9C9AD]/40 flex items-center justify-between text-[11px] text-[#355C4B] font-bold">
               <span>Explore Basics</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" strokeWidth={2.65} />
             </div>

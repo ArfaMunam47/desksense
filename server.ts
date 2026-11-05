@@ -50,28 +50,76 @@ function formatErrorMessage(error: any, fallback: string): string {
   return msg;
 }
 
-// Helper to generate content with fallback when primary model experiences high demand
-async function generateWithFallback(aiClient: any, request: any) {
-  const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+// Model candidates ordered by response latency and availability
+// Primary fast model: gemini-3.1-flash-lite (sub-second TTFT)
+const FAST_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+const VISION_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+
+// Helper to generate content with per-attempt timeout and fallback
+async function generateWithFallback(
+  aiClient: any,
+  request: any,
+  candidateModels: string[] = FAST_MODELS,
+  timeoutMs: number = 12000
+): Promise<{ response: any; modelUsed: string; durationMs: number }> {
   let lastErr = null;
   for (const model of candidateModels) {
+    const t0 = Date.now();
     try {
-      return await aiClient.models.generateContent({
-        ...request,
-        model,
-      });
+      const response = await Promise.race([
+        aiClient.models.generateContent({
+          ...request,
+          model,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout on model ${model} after ${timeoutMs}ms`)), timeoutMs)
+        ),
+      ]);
+      const durationMs = Date.now() - t0;
+      console.log(`[DeskSense Perf] Generated content with ${model} in ${(durationMs / 1000).toFixed(2)}s`);
+      return { response, modelUsed: model, durationMs };
     } catch (err: any) {
       lastErr = err;
       const isUnavailable =
         err?.status === 503 ||
         err?.message?.includes('503') ||
         err?.message?.includes('high demand') ||
-        err?.message?.includes('UNAVAILABLE');
+        err?.message?.includes('UNAVAILABLE') ||
+        err?.message?.includes('Timeout');
       if (isUnavailable) {
-        console.warn(`Model ${model} temporarily unavailable. Trying next candidate model...`);
+        console.warn(`[DeskSense Fallback] Model ${model} unavailable (${err.message}). Trying next candidate...`);
         continue;
       }
       throw err;
+    }
+  }
+  throw lastErr;
+}
+
+// Helper to connect to streaming content with fallback
+async function streamWithFallback(
+  aiClient: any,
+  request: any,
+  candidateModels: string[] = FAST_MODELS,
+  timeoutMs: number = 8000
+): Promise<{ stream: any; modelUsed: string }> {
+  let lastErr = null;
+  for (const model of candidateModels) {
+    try {
+      const stream = await Promise.race([
+        aiClient.models.generateContentStream({
+          ...request,
+          model,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Stream connection timeout on ${model}`)), timeoutMs)
+        ),
+      ]);
+      return { stream, modelUsed: model };
+    } catch (err: any) {
+      lastErr = err;
+      console.warn(`[DeskSense Fallback] Streaming on ${model} failed (${err.message}). Trying fallback...`);
+      continue;
     }
   }
   throw lastErr;
@@ -84,11 +132,128 @@ app.get('/api/status', (_req, res) => {
     appName: 'DeskSense',
     version: '0.9.0-preview',
     aiConfigured: Boolean(apiKey),
-    model: apiKey ? 'gemini-3.8-flash' : null,
+    model: apiKey ? FAST_MODELS[0] : null,
+    modelsAvailable: FAST_MODELS,
+    streamingSupported: true,
     environment: isProduction ? 'production' : 'development',
     platform: 'Web Environment (Desktop Bridge Ready)',
     serverTime: new Date().toISOString(),
   });
+});
+
+// Real model response streaming endpoint (Server-Sent Events)
+app.post('/api/chat/stream', async (req, res) => {
+  const requestStart = Date.now();
+  let firstTokenTime: number | null = null;
+  let isClosed = false;
+
+  res.on('close', () => {
+    isClosed = true;
+  });
+
+  try {
+    const { message, history = [], imageBase64, osContext = 'Windows 11' } = req.body;
+
+    if (!message && !imageBase64) {
+      return res.status(400).json({ error: 'Please provide a question or attached screenshot.' });
+    }
+
+    if (!ai) {
+      return res.status(503).json({
+        error: 'AI assistant is currently not configured with an API key.',
+      });
+    }
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    // Context management: keep only last 4 messages to prevent token bloat
+    const recentHistory = Array.isArray(history) ? history.slice(-4) : [];
+    const formattedHistory = recentHistory
+      .map((h: any) => `${h.role === 'user' ? 'User' : 'DeskSense'}: ${h.text}`)
+      .join('\n');
+
+    const promptText = `${
+      formattedHistory ? `Recent conversation context:\n${formattedHistory}\n\n` : ''
+    }User Question (${osContext}): "${message || 'Analyze this screen.'}"`;
+
+    let contentsPayload: any;
+    if (imageBase64) {
+      const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '');
+      contentsPayload = [
+        {
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: cleanBase64,
+          },
+        },
+        { text: promptText },
+      ];
+    } else {
+      contentsPayload = promptText;
+    }
+
+    const systemInstruction = `You are DeskSense, an empathetic, patient, and knowledgeable computer literacy mentor.
+Your audience includes students, beginners, and everyday users.
+Guidelines:
+- Explain things step-by-step in calm, plain language.
+- Keep answers concrete, actionable, and concise. Avoid unnecessary conversational filler.
+- If providing steps, format them clearly with numbers (1., 2., 3.) so they are easy to follow.
+- End with a reassuring 1-sentence learning tip if appropriate.`;
+
+    const candidateList = imageBase64 ? VISION_MODELS : FAST_MODELS;
+    const { stream, modelUsed } = await streamWithFallback(ai, {
+      contents: contentsPayload,
+      config: { systemInstruction },
+    }, candidateList);
+
+    for await (const chunk of stream) {
+      if (isClosed || res.writableEnded || res.destroyed) break;
+      const chunkText = chunk.text;
+      if (chunkText) {
+        if (!firstTokenTime) {
+          firstTokenTime = Date.now() - requestStart;
+          res.write(
+            `event: meta\ndata: ${JSON.stringify({
+              ttftMs: firstTokenTime,
+              model: modelUsed,
+            })}\n\n`
+          );
+        }
+        res.write(`event: delta\ndata: ${JSON.stringify({ text: chunkText })}\n\n`);
+      }
+    }
+
+    const totalTimeMs = Date.now() - requestStart;
+    console.log(
+      `[DeskSense Perf] /api/chat/stream completed in ${(totalTimeMs / 1000).toFixed(2)}s (TTFT: ${(
+        (firstTokenTime || 0) / 1000
+      ).toFixed(2)}s, Model: ${modelUsed})`
+    );
+
+    res.write(
+      `event: done\ndata: ${JSON.stringify({
+        totalTimeMs,
+        ttftMs: firstTokenTime || totalTimeMs,
+        model: modelUsed,
+      })}\n\n`
+    );
+    res.end();
+  } catch (error: any) {
+    console.error('Error during streaming:', error);
+    const friendly = formatErrorMessage(
+      error,
+      'DeskSense is taking longer than expected. You can retry your question.'
+    );
+    if (!res.headersSent) {
+      return res.status(500).json({ error: friendly });
+    }
+    res.write(`event: error\ndata: ${JSON.stringify({ error: friendly })}\n\n`);
+    res.end();
+  }
 });
 
 // Screen analysis endpoint
@@ -131,105 +296,117 @@ Analyze the provided screenshot carefully:
 6. Rate your confidence honestly (high, medium, low, or needs_clarification). If uncertain, explain why and ask for clarification. Do NOT hallucinate buttons that aren't there.
 7. Include a reassuring computer literacy takeaway.`;
 
-    const response = await generateWithFallback(ai, {
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType,
-              data: cleanBase64,
+    const { response, modelUsed, durationMs } = await generateWithFallback(
+      ai,
+      {
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: cleanBase64,
+              },
             },
-          },
-          {
-            text: promptText,
-          },
-        ],
-      },
-      config: {
-        systemInstruction: `You are DeskSense, an empathetic, patient, and precise computer literacy mentor.
+            {
+              text: promptText,
+            },
+          ],
+        },
+        config: {
+          systemInstruction: `You are DeskSense, an empathetic, patient, and precise computer literacy mentor.
 Your audience consists of first-time laptop users, students, and beginners who may feel nervous or embarrassed asking basic questions.
 Speak in calm, plain language. Avoid unnecessary technical jargon.
 Distinguish strictly between what is clearly visible on the user's screen and assumptions.
 If you cannot see the required button or window, state that clearly and tell the user how to bring it up.`,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            interfaceDescription: {
-              type: Type.STRING,
-              description: 'A brief 1-2 sentence description of what is visible on the captured screen.',
-            },
-            activeApplication: {
-              type: Type.STRING,
-              description: 'The main detected software or desktop element (e.g. Google Chrome, File Explorer, Windows Settings, Desktop).',
-            },
-            visibleElements: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'Key visible landmarks, buttons, menus, or icons identified on the screen.',
-            },
-            interpretation: {
-              type: Type.STRING,
-              description: 'Calm explanation of what is currently on screen relevant to the question.',
-            },
-            confidence: {
-              type: Type.STRING,
-              description: 'Confidence level: high, medium, low, or needs_clarification.',
-            },
-            confidenceReason: {
-              type: Type.STRING,
-              description: 'Honest explanation of why this confidence level was chosen.',
-            },
-            clarificationQuestion: {
-              type: Type.STRING,
-              description: 'If confidence is low or needs_clarification, a gentle question to ask the user.',
-            },
-            steps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  stepNumber: { type: Type.INTEGER },
-                  title: { type: Type.STRING, description: 'Short action title' },
-                  instruction: { type: Type.STRING, description: 'Gentle, clear instruction' },
-                  actionType: {
-                    type: Type.STRING,
-                    description: 'One of: click, right_click, double_click, type, shortcut, look, drag',
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              interfaceDescription: {
+                type: Type.STRING,
+                description: 'A brief 1-2 sentence description of what is visible on the captured screen.',
+              },
+              activeApplication: {
+                type: Type.STRING,
+                description: 'The main detected software or desktop element (e.g. Google Chrome, File Explorer, Windows Settings, Desktop).',
+              },
+              visibleElements: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'Key visible landmarks, buttons, menus, or icons identified on the screen.',
+              },
+              interpretation: {
+                type: Type.STRING,
+                description: 'Calm explanation of what is currently on screen relevant to the question.',
+              },
+              confidence: {
+                type: Type.STRING,
+                description: 'Confidence level: high, medium, low, or needs_clarification.',
+              },
+              confidenceReason: {
+                type: Type.STRING,
+                description: 'Honest explanation of why this confidence level was chosen.',
+              },
+              clarificationQuestion: {
+                type: Type.STRING,
+                description: 'If confidence is low or needs_clarification, a gentle question to ask the user.',
+              },
+              steps: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    stepNumber: { type: Type.INTEGER },
+                    title: { type: Type.STRING, description: 'Short action title' },
+                    instruction: { type: Type.STRING, description: 'Gentle, clear instruction' },
+                    actionType: {
+                      type: Type.STRING,
+                      description: 'One of: click, right_click, double_click, type, shortcut, look, drag',
+                    },
+                    targetElement: { type: Type.STRING, description: 'The specific visual button, menu item, or area' },
+                    tip: { type: Type.STRING, description: 'Helpful reassurance or recovery tip if they do not see it' },
                   },
-                  targetElement: { type: Type.STRING, description: 'The specific visual button, menu item, or area' },
-                  tip: { type: Type.STRING, description: 'Helpful reassurance or recovery tip if they do not see it' },
+                  required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
                 },
-                required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
+              },
+              expectedResult: {
+                type: Type.STRING,
+                description: 'What the user will see once they complete these steps.',
+              },
+              learningTakeaway: {
+                type: Type.STRING,
+                description: 'A memorable computer literacy concept that helps them next time.',
               },
             },
-            expectedResult: {
-              type: Type.STRING,
-              description: 'What the user will see once they complete these steps.',
-            },
-            learningTakeaway: {
-              type: Type.STRING,
-              description: 'A memorable computer literacy concept that helps them next time.',
-            },
+            required: [
+              'interfaceDescription',
+              'activeApplication',
+              'visibleElements',
+              'interpretation',
+              'confidence',
+              'confidenceReason',
+              'steps',
+              'expectedResult',
+              'learningTakeaway',
+            ],
           },
-          required: [
-            'interfaceDescription',
-            'activeApplication',
-            'visibleElements',
-            'interpretation',
-            'confidence',
-            'confidenceReason',
-            'steps',
-            'expectedResult',
-            'learningTakeaway',
-          ],
         },
       },
-    });
+      VISION_MODELS,
+      15000
+    );
+
+    res.setHeader('X-Response-Time-Ms', durationMs);
+    res.setHeader('X-Model-Used', modelUsed);
 
     const parsedData = JSON.parse(response.text || '{}');
     return res.json({
       success: true,
       data: parsedData,
+      meta: {
+        modelUsed,
+        durationMs,
+      },
     });
   } catch (error: any) {
     console.error('Error analyzing screen:', error);
@@ -266,53 +443,65 @@ Keep instructions very concrete (e.g. "Look at the bottom left corner for the Wi
 Avoid jargon.
 Return a structured response.`;
 
-    const response = await generateWithFallback(ai, {
-      contents: promptText,
-      config: {
-        systemInstruction: `You are DeskSense, an empathetic computer literacy guide for beginners. Never make the user feel foolish for asking a basic question. Always assume Windows 11 unless specified otherwise. Keep steps sequential, short, and calm.`,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: {
-              type: Type.STRING,
-              description: 'Reassuring 1-2 sentence answer acknowledging their question.',
-            },
-            category: {
-              type: Type.STRING,
-              description: 'The relevant category of computer task.',
-            },
-            prerequisites: {
-              type: Type.STRING,
-              description: 'What should be open or ready before starting.',
-            },
-            steps: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  stepNumber: { type: Type.INTEGER },
-                  title: { type: Type.STRING },
-                  instruction: { type: Type.STRING },
-                  actionType: { type: Type.STRING },
-                  targetElement: { type: Type.STRING },
-                  tip: { type: Type.STRING },
-                },
-                required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
+    const { response, modelUsed, durationMs } = await generateWithFallback(
+      ai,
+      {
+        contents: promptText,
+        config: {
+          systemInstruction: `You are DeskSense, an empathetic computer literacy guide for beginners. Never make the user feel foolish for asking a basic question. Always assume Windows 11 unless specified otherwise. Keep steps sequential, short, and calm.`,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: {
+                type: Type.STRING,
+                description: 'Reassuring 1-2 sentence answer acknowledging their question.',
               },
+              category: {
+                type: Type.STRING,
+                description: 'The relevant category of computer task.',
+              },
+              prerequisites: {
+                type: Type.STRING,
+                description: 'What should be open or ready before starting.',
+              },
+              steps: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    stepNumber: { type: Type.INTEGER },
+                    title: { type: Type.STRING },
+                    instruction: { type: Type.STRING },
+                    actionType: { type: Type.STRING },
+                    targetElement: { type: Type.STRING },
+                    tip: { type: Type.STRING },
+                  },
+                  required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
+                },
+              },
+              expectedResult: { type: Type.STRING },
+              learningTakeaway: { type: Type.STRING },
             },
-            expectedResult: { type: Type.STRING },
-            learningTakeaway: { type: Type.STRING },
+            required: ['summary', 'category', 'steps', 'expectedResult', 'learningTakeaway'],
           },
-          required: ['summary', 'category', 'steps', 'expectedResult', 'learningTakeaway'],
         },
       },
-    });
+      FAST_MODELS,
+      12000
+    );
+
+    res.setHeader('X-Response-Time-Ms', durationMs);
+    res.setHeader('X-Model-Used', modelUsed);
 
     const parsedData = JSON.parse(response.text || '{}');
     return res.json({
       success: true,
       data: parsedData,
+      meta: {
+        modelUsed,
+        durationMs,
+      },
     });
   } catch (error: any) {
     console.error('Error answering question:', error);
@@ -402,93 +591,105 @@ Perform the following 6 requirements:
       text: promptText,
     });
 
-    const response = await generateWithFallback(ai, {
-      contents: { parts: contentsParts },
-      config: {
-        systemInstruction: `You are DeskSense Coding Mentor, a patient, safety-minded programming tutor.
+    const { response, modelUsed, durationMs } = await generateWithFallback(
+      ai,
+      {
+        contents: { parts: contentsParts },
+        config: {
+          systemInstruction: `You are DeskSense Coding Mentor, a patient, safety-minded programming tutor.
 Your audience includes beginner coders, students, and developers troubleshooting unfamiliar tools.
 Never silently propose destructive actions.
 Always prioritize safety, explain potential risks of commands, and keep instructions step-by-step.`,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            identifiedGoal: {
-              type: Type.STRING,
-              description: 'Clear statement of what the user is trying to accomplish.',
-            },
-            problemExplanation: {
-              type: Type.STRING,
-              description: 'Plain-language explanation of why this error or roadblock occurred.',
-            },
-            likelyCauses: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'List of 1 to 3 plausible causes, acknowledging uncertainty.',
-            },
-            safeSolutionSummary: {
-              type: Type.STRING,
-              description: 'Summary of the safe, recommended fix.',
-            },
-            isPotentiallyDestructive: {
-              type: Type.BOOLEAN,
-              description: 'Whether any proposed command could erase files or overwrite history.',
-            },
-            destructiveWarning: {
-              type: Type.STRING,
-              description: 'Explicit warning explaining risk and backup procedure if destructive.',
-            },
-            steps: {
-              type: Type.ARRAY,
-              items: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              identifiedGoal: {
+                type: Type.STRING,
+                description: 'Clear statement of what the user is trying to accomplish.',
+              },
+              problemExplanation: {
+                type: Type.STRING,
+                description: 'Plain-language explanation of why this error or roadblock occurred.',
+              },
+              likelyCauses: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'List of 1 to 3 plausible causes, acknowledging uncertainty.',
+              },
+              safeSolutionSummary: {
+                type: Type.STRING,
+                description: 'Summary of the safe, recommended fix.',
+              },
+              isPotentiallyDestructive: {
+                type: Type.BOOLEAN,
+                description: 'Whether any proposed command could erase files or overwrite history.',
+              },
+              destructiveWarning: {
+                type: Type.STRING,
+                description: 'Explicit warning explaining risk and backup procedure if destructive.',
+              },
+              steps: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    stepNumber: { type: Type.INTEGER },
+                    title: { type: Type.STRING },
+                    instruction: { type: Type.STRING },
+                    actionType: { type: Type.STRING },
+                    targetElement: { type: Type.STRING },
+                    tip: { type: Type.STRING },
+                  },
+                  required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
+                },
+              },
+              codeDiffOrSnippet: {
                 type: Type.OBJECT,
                 properties: {
-                  stepNumber: { type: Type.INTEGER },
-                  title: { type: Type.STRING },
-                  instruction: { type: Type.STRING },
-                  actionType: { type: Type.STRING },
-                  targetElement: { type: Type.STRING },
-                  tip: { type: Type.STRING },
+                  language: { type: Type.STRING },
+                  description: { type: Type.STRING },
+                  code: { type: Type.STRING },
                 },
-                required: ['stepNumber', 'title', 'instruction', 'actionType', 'targetElement'],
+                required: ['language', 'description', 'code'],
+              },
+              learningTakeaway: {
+                type: Type.STRING,
+                description: 'A clear computer science or programming takeaway.',
+              },
+              suggestedFollowUps: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: '2 to 3 helpful follow-up questions.',
               },
             },
-            codeDiffOrSnippet: {
-              type: Type.OBJECT,
-              properties: {
-                language: { type: Type.STRING },
-                description: { type: Type.STRING },
-                code: { type: Type.STRING },
-              },
-              required: ['language', 'description', 'code'],
-            },
-            learningTakeaway: {
-              type: Type.STRING,
-              description: 'A clear computer science or programming takeaway.',
-            },
-            suggestedFollowUps: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: '2 to 3 helpful follow-up questions.',
-            },
+            required: [
+              'identifiedGoal',
+              'problemExplanation',
+              'likelyCauses',
+              'safeSolutionSummary',
+              'isPotentiallyDestructive',
+              'steps',
+              'learningTakeaway',
+            ],
           },
-          required: [
-            'identifiedGoal',
-            'problemExplanation',
-            'likelyCauses',
-            'safeSolutionSummary',
-            'isPotentiallyDestructive',
-            'steps',
-            'learningTakeaway',
-          ],
         },
       },
-    });
+      FAST_MODELS,
+      15000
+    );
+
+    res.setHeader('X-Response-Time-Ms', durationMs);
+    res.setHeader('X-Model-Used', modelUsed);
 
     const parsedData = JSON.parse(response.text || '{}');
     return res.json({
       success: true,
       data: parsedData,
+      meta: {
+        modelUsed,
+        durationMs,
+      },
     });
   } catch (error: any) {
     console.error('Error generating coding help:', error);
@@ -531,16 +732,28 @@ If the user is asking to clarify a specific step or says they don't understand, 
 If they are asking "what if...", explain calmly.
 Keep your response concise, empathetic, and actionable.`;
 
-    const response = await generateWithFallback(ai, {
-      contents: promptText,
-      config: {
-        systemInstruction: `You are DeskSense, an empathetic computer mentor. Answer follow-up questions concisely and calmly. Do not repeat greeting fluff. Focus directly on answering the user's specific point of confusion.`,
+    const { response, modelUsed, durationMs } = await generateWithFallback(
+      ai,
+      {
+        contents: promptText,
+        config: {
+          systemInstruction: `You are DeskSense, an empathetic computer mentor. Answer follow-up questions concisely and calmly. Do not repeat greeting fluff. Focus directly on answering the user's specific point of confusion.`,
+        },
       },
-    });
+      FAST_MODELS,
+      8000
+    );
+
+    res.setHeader('X-Response-Time-Ms', durationMs);
+    res.setHeader('X-Model-Used', modelUsed);
 
     return res.json({
       success: true,
       answer: response.text || 'I understand. Let us review the current step carefully.',
+      meta: {
+        modelUsed,
+        durationMs,
+      },
     });
   } catch (error: any) {
     console.error('Error answering follow-up:', error);

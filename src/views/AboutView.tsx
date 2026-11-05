@@ -286,7 +286,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
         <p className="text-xs font-semibold text-[#727A75] leading-none">
           Designed &amp; Developed by
         </p>
-        <p className="text-base font-extrabold text-[#303B38] tracking-tight">
+        <p className="text-base font-extrabold text-[#355C4B] tracking-tight">
           Arfa Munam
         </p>
         <p className="text-xs text-[#727A75] font-mono pt-1">

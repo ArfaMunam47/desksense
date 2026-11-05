@@ -5,6 +5,7 @@ import {
   Minimize2,
   Maximize2,
   Send,
+  Square,
   Camera,
   RefreshCw,
   Trash2,
@@ -15,7 +16,8 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { ScreenCapture } from '../types';
-import { askAssistant, analyzeScreen, askFollowUpQuestion } from '../services/api';
+import { streamChat } from '../services/api';
+import { DeskSenseEmblem } from './DeskSenseEmblem';
 
 interface Message {
   id: string;
@@ -44,7 +46,9 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isReceivingFirstToken, setIsReceivingFirstToken] = useState(false);
   const [attachedScreenshot, setAttachedScreenshot] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -81,9 +85,32 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
     'How do I connect Bluetooth headphones?',
   ];
 
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setIsReceivingFirstToken(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const handleSend = async (textToSend?: string) => {
+    if (isLoading) return;
     const query = (textToSend || input).trim();
     if (!query && !attachedScreenshot) return;
+
+    // Abort any pending stream
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -93,177 +120,90 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
       hasImage: Boolean(attachedScreenshot),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantId = `assistant-${Date.now() + 1}`;
+    const assistantMessage: Message = {
+      id: assistantId,
+      role: 'assistant',
+      text: '',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInput('');
     setIsLoading(true);
+    setIsReceivingFirstToken(true);
 
     const imageToUse = attachedScreenshot;
-    // Clear attachment after sending
     setAttachedScreenshot(null);
     if (currentCapture) {
       onDiscardCapture();
     }
 
+    // Keep context compact (last 4 non-greeting messages)
+    const historyForStream = messages
+      .filter((m) => m.id !== 'initial-greeting' && m.text.trim())
+      .slice(-4)
+      .map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
+
     try {
-      if (imageToUse) {
-        // Use vision analysis
-        const res = await analyzeScreen(imageToUse, query, defaultOs);
-        if (res.success && res.data) {
-          const stepInstructions = res.data.steps.map(
-            (s, idx) => `${idx + 1}. ${s.title}: ${s.instruction}`
-          );
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              text: `${res.data!.interpretation}\n\nHere is how to proceed:`,
-              steps: stepInstructions,
-              takeaway: res.data!.learningTakeaway,
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              text:
-                res.error ||
-                'I had difficulty reading that screenshot. Could you describe what application or window you are looking at?',
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ]);
-        }
-      } else if (messages.length > 2) {
-        // Conversational follow-up
-        const recentContext = messages
-          .slice(-3)
-          .map((m) => `${m.role}: ${m.text}`)
-          .join('\n');
-        const res = await askFollowUpQuestion(
-          recentContext,
-          [],
-          query,
-          'general'
-        );
-        if (res.success && res.answer) {
-          const answerText: string = res.answer;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              text: answerText,
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ]);
-        } else {
-          // Fallback to fresh askAssistant
-          const directRes = await askAssistant(query, defaultOs);
-          if (directRes.success && directRes.data) {
-            const stepInstructions = directRes.data.steps.map(
-              (s, idx) => `${idx + 1}. ${s.title}: ${s.instruction}`
-            );
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `assistant-${Date.now()}`,
-                role: 'assistant',
-                text: `${directRes.data!.summary}`,
-                steps: stepInstructions,
-                takeaway: directRes.data!.learningTakeaway,
-                timestamp: new Date().toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              },
-            ]);
-          } else {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `assistant-${Date.now()}`,
-                role: 'assistant',
-                text: "I'm having a little trouble connecting right now. Try checking the Task Library or asking in a slightly different way.",
-                timestamp: new Date().toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              },
-            ]);
-          }
-        }
-      } else {
-        // Direct assistant question
-        const res = await askAssistant(query, defaultOs);
-        if (res.success && res.data) {
-          const stepInstructions = res.data.steps.map(
-            (s, idx) => `${idx + 1}. ${s.title}: ${s.instruction}`
-          );
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              text: `${res.data!.summary}`,
-              steps: stepInstructions,
-              takeaway: directFallbackTakeaway(res.data!.learningTakeaway),
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `assistant-${Date.now()}`,
-              role: 'assistant',
-              text:
-                res.error ||
-                "I'm here to help! Could you clarify what task you'd like step-by-step guidance for?",
-              timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-            },
-          ]);
-        }
-      }
-    } catch (err: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          text:
-            err.message ||
-            'Something went wrong while formulating a response. Please try again.',
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+      let accumulated = '';
+      await streamChat({
+        message: query,
+        history: historyForStream,
+        imageBase64: imageToUse,
+        osContext: defaultOs,
+        signal: controller.signal,
+        onMeta: () => {
+          setIsReceivingFirstToken(false);
         },
-      ]);
+        onChunk: (chunk) => {
+          setIsReceivingFirstToken(false);
+          accumulated += chunk;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantId ? { ...msg, text: accumulated } : msg
+            )
+          );
+        },
+        onError: (err) => {
+          setIsReceivingFirstToken(false);
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantId
+                ? {
+                    ...msg,
+                    text: accumulated
+                      ? accumulated + `\n\n[Note: ${err}]`
+                      : err || 'DeskSense took longer than expected. Please try again.',
+                  }
+                : msg
+            )
+          );
+        },
+        onDone: () => {
+          setIsReceivingFirstToken(false);
+        },
+      });
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId && !msg.text
+              ? {
+                  ...msg,
+                  text: 'DeskSense could not connect to the AI service. Please check your connection or retry.',
+                }
+              : msg
+          )
+        );
+      }
     } finally {
       setIsLoading(false);
+      setIsReceivingFirstToken(false);
     }
-  };
-
-  const directFallbackTakeaway = (t?: string) => {
-    return t || undefined;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -274,6 +214,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
   };
 
   const handleClearChat = () => {
+    handleCancel();
     setMessages([
       {
         id: 'initial-greeting',
@@ -300,7 +241,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
           aria-label="Open DeskSense AI Assistant"
         >
           <div className="relative">
-            <Sparkles className="w-5.5 h-5.5 text-white" strokeWidth={2.7} />
+            <DeskSenseEmblem className="w-5.5 h-5.5 text-white" strokeWidth={2.6} />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#DDEBDD] ring-2 ring-[#355C4B]" />
           </div>
           <span className="text-xs font-extrabold pr-1 tracking-wide">
@@ -324,7 +265,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
           <div className="bg-[#FFFFFF] border-b border-[#E2E4DF] px-4 py-3 flex items-center justify-between shrink-0 select-none">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-[#DDEBDD] border border-[#A9C9AD] text-[#355C4B] flex items-center justify-center shrink-0 shadow-[inset_0_1px_1px_rgba(255,255,255,0.85),0_2px_4px_rgba(53,92,75,0.12)]">
-                <Sparkles className="w-4.5 h-4.5 text-[#355C4B]" strokeWidth={2.7} />
+                <DeskSenseEmblem className="w-5 h-5 text-[#355C4B]" strokeWidth={2.6} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
@@ -377,6 +318,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
               {/* Message History */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#FAF9F6]">
                 {messages.map((msg) => {
+                  if (msg.role === 'assistant' && !msg.text && isLoading) return null;
                   const isUser = msg.role === 'user';
                   return (
                     <div
@@ -432,7 +374,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
                   );
                 })}
 
-                {isLoading && (
+                {isLoading && isReceivingFirstToken && (
                   <div className="flex items-start gap-2">
                     <div className="bg-[#FFFFFF] border border-[#E2E4DF] rounded-2xl rounded-bl-xs px-3.5 py-2.5 shadow-2xs text-xs text-[#727A75] flex items-center gap-2">
                       <RefreshCw className="w-4 h-4 animate-spin text-[#355C4B]" strokeWidth={2.65} />
@@ -520,15 +462,28 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
                       <Camera className="w-4 h-4" strokeWidth={2.65} />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSend()}
-                      disabled={isLoading || (!input.trim() && !attachedScreenshot)}
-                      className="p-1.5 rounded-lg bg-[#355C4B] hover:bg-[#29473A] disabled:opacity-40 text-white transition-all cursor-pointer shadow-2xs"
-                      title="Send question"
-                    >
-                      <Send className="w-4 h-4" strokeWidth={2.65} />
-                    </button>
+                    {isLoading ? (
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="p-1.5 rounded-lg bg-[#B96F7D] hover:bg-[#A35967] text-white transition-all cursor-pointer shadow-2xs"
+                        title="Stop generating"
+                        aria-label="Stop generating"
+                      >
+                        <Square className="w-4 h-4 fill-current" strokeWidth={2} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSend()}
+                        disabled={!input.trim() && !attachedScreenshot}
+                        className="p-1.5 rounded-lg bg-[#355C4B] hover:bg-[#29473A] disabled:opacity-40 text-white transition-all cursor-pointer shadow-2xs"
+                        title="Send question"
+                        aria-label="Send question"
+                      >
+                        <Send className="w-4 h-4" strokeWidth={2.65} />
+                      </button>
+                    )}
                   </div>
                 </div>
 

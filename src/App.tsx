@@ -388,7 +388,10 @@ export default function App() {
           <div className="flex items-center gap-2">
             <span className="font-extrabold text-[#303B38]">DeskSense</span>
             <span>|</span>
-            <span className="font-medium text-[#727A75]">Designed &amp; Developed by Arfa Munam</span>
+            <span className="text-[#727A75] font-normal">
+              Designed &amp; Developed by{' '}
+              <span className="font-bold text-[#355C4B]">Arfa Munam</span>
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[#355C4B] font-bold flex items-center gap-1.5">
