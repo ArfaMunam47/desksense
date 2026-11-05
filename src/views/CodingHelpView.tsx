@@ -7,6 +7,7 @@ import {
   Trash2,
   Check,
   Copy,
+  Download,
   ArrowRight,
   ShieldAlert,
   Send,
@@ -222,6 +223,29 @@ export const CodingHelpView: React.FC<CodingHelpViewProps> = ({
     navigator.clipboard.writeText(code);
     setCopiedSnippet(true);
     setTimeout(() => setCopiedSnippet(false), 2000);
+  };
+
+  const handleDownloadCode = (code: string, language: string) => {
+    let filename = 'solution.txt';
+    const lang = (language || '').toLowerCase();
+    if (lang.includes('python') || lang === 'py') filename = 'solution.py';
+    else if (lang.includes('javascript') || lang === 'js') filename = 'solution.js';
+    else if (lang.includes('typescript') || lang === 'ts') filename = 'solution.ts';
+    else if (lang.includes('html')) filename = 'index.html';
+    else if (lang.includes('css')) filename = 'style.css';
+    else if (lang.includes('sql')) filename = 'query.sql';
+    else if (lang.includes('bash') || lang.includes('shell') || lang === 'sh') filename = 'command.sh';
+    else if (lang.includes('markdown') || lang === 'md') filename = 'README.md';
+
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleQuickFollowUpClick = (questionText: string) => {
@@ -665,23 +689,34 @@ export const CodingHelpView: React.FC<CodingHelpViewProps> = ({
                         </div>
                         <span>Proposed Code or Command ({result.codeDiffOrSnippet.language}):</span>
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCode(result.codeDiffOrSnippet!.code)}
-                        className="text-xs text-[#65517E] hover:underline flex items-center gap-1.5 cursor-pointer font-bold bg-[#E8E2F1]/50 px-2.5 py-1 rounded-lg border border-[#C8BFD8]"
-                      >
-                        {copiedSnippet ? (
-                          <>
-                            <Check className="w-4 h-4 text-[#355C4B]" strokeWidth={2.75} />
-                            <span>Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" strokeWidth={2.65} />
-                            <span>Copy Code</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(result.codeDiffOrSnippet!.code)}
+                          className="text-xs text-[#65517E] hover:underline flex items-center gap-1.5 cursor-pointer font-bold bg-[#E8E2F1]/50 px-2.5 py-1 rounded-lg border border-[#C8BFD8]"
+                        >
+                          {copiedSnippet ? (
+                            <>
+                              <Check className="w-4 h-4 text-[#355C4B]" strokeWidth={2.75} />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" strokeWidth={2.65} />
+                              <span>Copy Code</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadCode(result.codeDiffOrSnippet!.code, result.codeDiffOrSnippet!.language)}
+                          className="text-xs text-white flex items-center gap-1.5 cursor-pointer font-bold bg-[#355C4B] hover:bg-[#29473A] px-2.5 py-1 rounded-lg shadow-2xs transition-colors"
+                          title="Save code to computer"
+                        >
+                          <Download className="w-4 h-4" strokeWidth={2.65} />
+                          <span>Save File</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* Clean neutral dark editor container */}

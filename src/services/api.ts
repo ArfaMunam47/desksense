@@ -30,11 +30,12 @@ export interface StreamChatParams {
   message?: string;
   history?: Array<{ role: 'user' | 'assistant'; text: string }>;
   imageBase64?: string | null;
+  attachedFile?: { name: string; content: string; size?: number } | null;
   osContext?: string;
   signal?: AbortSignal;
   onChunk: (chunk: string) => void;
-  onMeta?: (meta: { ttftMs?: number; model?: string }) => void;
-  onDone?: (summary: { totalTimeMs?: number; ttftMs?: number; model?: string }) => void;
+  onMeta?: (meta: { ttftMs?: number; model?: string; category?: string; categoryLabel?: string }) => void;
+  onDone?: (summary: { totalTimeMs?: number; ttftMs?: number; model?: string; category?: string; categoryLabel?: string }) => void;
   onError?: (err: string) => void;
 }
 
@@ -43,6 +44,7 @@ export async function streamChat(params: StreamChatParams): Promise<void> {
     message,
     history = [],
     imageBase64,
+    attachedFile,
     osContext = 'Windows 11',
     signal,
     onChunk,
@@ -61,6 +63,7 @@ export async function streamChat(params: StreamChatParams): Promise<void> {
         message,
         history,
         imageBase64: imageBase64 || undefined,
+        attachedFile: attachedFile || undefined,
         osContext,
       }),
       signal,

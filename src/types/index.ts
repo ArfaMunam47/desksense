@@ -8,6 +8,28 @@ export type TaskCategory =
   | 'Programming and Development'
   | 'Troubleshooting';
 
+export type RequestCategory =
+  | 'computer_guidance'
+  | 'windows_troubleshooting'
+  | 'application_assistance'
+  | 'coding_programming'
+  | 'debugging_error'
+  | 'project_development'
+  | 'document_generation'
+  | 'readme_generation'
+  | 'file_folder_management'
+  | 'git_github'
+  | 'learning_explanations'
+  | 'productivity_planning'
+  | 'creative_assistance'
+  | 'screen_aware';
+
+export interface AttachedFile {
+  name: string;
+  content: string;
+  size: number;
+}
+
 export type ActionType =
   | 'click'
   | 'right_click'

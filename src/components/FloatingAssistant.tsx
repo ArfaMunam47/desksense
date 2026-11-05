@@ -7,6 +7,10 @@ import {
   Send,
   Square,
   Camera,
+  FileText,
+  Download,
+  Copy,
+  Check,
   RefreshCw,
   Trash2,
   CheckCircle2,
@@ -27,6 +31,8 @@ interface Message {
   steps?: string[];
   takeaway?: string;
   hasImage?: boolean;
+  attachedFileName?: string;
+  categoryLabel?: string;
 }
 
 interface FloatingAssistantProps {
@@ -35,6 +41,92 @@ interface FloatingAssistantProps {
   onDiscardCapture: () => void;
   defaultOs?: string;
 }
+
+const CodeOrMarkdownBlock: React.FC<{ code: string; language: string }> = ({ code, language }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    let filename = 'document.txt';
+    const lang = (language || '').toLowerCase();
+    if (lang === 'markdown' || lang === 'md' || code.trim().startsWith('#')) {
+      filename = 'README.md';
+    } else if (lang === 'python' || lang === 'py') {
+      filename = 'script.py';
+    } else if (lang === 'javascript' || lang === 'js') {
+      filename = 'index.js';
+    } else if (lang === 'typescript' || lang === 'ts') {
+      filename = 'index.ts';
+    } else if (lang === 'html') {
+      filename = 'index.html';
+    } else if (lang === 'css') {
+      filename = 'styles.css';
+    } else if (lang === 'json') {
+      filename = 'config.json';
+    } else if (lang === 'sql') {
+      filename = 'query.sql';
+    } else if (lang === 'sh' || lang === 'bash') {
+      filename = 'script.sh';
+    }
+
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="my-2 rounded-xl border border-[#E2E4DF] bg-[#252928] overflow-hidden text-xs shadow-inner">
+      <div className="bg-[#1D2120] px-3 py-1.5 flex items-center justify-between border-b border-white/10 text-[10px] text-[#A9B2AD]">
+        <span className="font-mono font-bold text-white uppercase tracking-wider">
+          {language || 'Code / Document'}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/10 text-white/90 hover:text-white transition-colors cursor-pointer"
+            title="Copy code"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3 h-3 text-[#A9C9AD]" strokeWidth={2.65} />
+                <span className="text-[#A9C9AD] font-bold">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3" strokeWidth={2.65} />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#355C4B] hover:bg-[#29473A] text-white transition-colors cursor-pointer font-bold shadow-2xs"
+            title="Download file to computer"
+          >
+            <Download className="w-3 h-3" strokeWidth={2.65} />
+            <span>Download</span>
+          </button>
+        </div>
+      </div>
+      <pre className="p-3 font-mono text-[11px] leading-relaxed text-[#F4F4F1] overflow-x-auto whitespace-pre">
+        {code}
+      </pre>
+    </div>
+  );
+};
 
 export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
   onOpenCapture,
@@ -48,6 +140,12 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isReceivingFirstToken, setIsReceivingFirstToken] = useState(false);
   const [attachedScreenshot, setAttachedScreenshot] = useState<string | null>(null);
+  const [attachedFile, setAttachedFile] = useState<{
+    name: string;
+    content: string;
+    size: number;
+  } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const [messages, setMessages] = useState<Message[]>([
@@ -85,6 +183,26 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
     'How do I connect Bluetooth headphones?',
   ];
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Please select a text or code file under 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = reader.result as string;
+      setAttachedFile({
+        name: file.name,
+        content,
+        size: file.size,
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleCancel = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -103,7 +221,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
   const handleSend = async (textToSend?: string) => {
     if (isLoading) return;
     const query = (textToSend || input).trim();
-    if (!query && !attachedScreenshot) return;
+    if (!query && !attachedScreenshot && !attachedFile) return;
 
     // Abort any pending stream
     if (abortControllerRef.current) {
@@ -115,9 +233,14 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      text: query || 'Analyze this screen for me, please.',
+      text:
+        query ||
+        (attachedFile
+          ? `Please inspect attached file "${attachedFile.name}"`
+          : 'Analyze this screen for me, please.'),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       hasImage: Boolean(attachedScreenshot),
+      attachedFileName: attachedFile?.name,
     };
 
     const assistantId = `assistant-${Date.now() + 1}`;
@@ -134,15 +257,17 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
     setIsReceivingFirstToken(true);
 
     const imageToUse = attachedScreenshot;
+    const fileToUse = attachedFile;
     setAttachedScreenshot(null);
+    setAttachedFile(null);
     if (currentCapture) {
       onDiscardCapture();
     }
 
-    // Keep context compact (last 4 non-greeting messages)
+    // Keep context compact (last 6 non-greeting messages)
     const historyForStream = messages
       .filter((m) => m.id !== 'initial-greeting' && m.text.trim())
-      .slice(-4)
+      .slice(-6)
       .map((m) => ({
         role: m.role,
         text: m.text,
@@ -154,10 +279,18 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
         message: query,
         history: historyForStream,
         imageBase64: imageToUse,
+        attachedFile: fileToUse,
         osContext: defaultOs,
         signal: controller.signal,
-        onMeta: () => {
+        onMeta: (meta) => {
           setIsReceivingFirstToken(false);
+          if (meta?.categoryLabel) {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId ? { ...msg, categoryLabel: meta.categoryLabel } : msg
+              )
+            );
+          }
         },
         onChunk: (chunk) => {
           setIsReceivingFirstToken(false);
@@ -224,6 +357,37 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
       },
     ]);
     setAttachedScreenshot(null);
+    setAttachedFile(null);
+  };
+
+  const renderMessageContent = (text: string) => {
+    if (!text.includes('```')) {
+      return (
+        <p className="whitespace-pre-line text-xs font-normal leading-relaxed">
+          {text}
+        </p>
+      );
+    }
+
+    const parts = text.split(/(```[\s\S]*?```)/g);
+    return (
+      <div className="space-y-2 text-xs font-normal leading-relaxed">
+        {parts.map((part, idx) => {
+          if (part.startsWith('```') && part.endsWith('```')) {
+            const firstLineEnd = part.indexOf('\n');
+            const lang = firstLineEnd !== -1 ? part.slice(3, firstLineEnd).trim() : '';
+            const code = firstLineEnd !== -1 ? part.slice(firstLineEnd + 1, -3) : part.slice(3, -3);
+            return <CodeOrMarkdownBlock key={idx} code={code} language={lang} />;
+          }
+          if (!part.trim()) return null;
+          return (
+            <p key={idx} className="whitespace-pre-line">
+              {part}
+            </p>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -341,9 +505,21 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
                           </div>
                         )}
 
-                        <p className="whitespace-pre-line text-xs font-normal">
-                          {msg.text}
-                        </p>
+                        {msg.attachedFileName && (
+                          <div className="flex items-center gap-1.5 text-[10px] bg-black/10 text-white/90 px-2 py-0.5 rounded-md font-semibold mb-1 w-fit">
+                            <FileText className="w-3.5 h-3.5" strokeWidth={2.65} />
+                            <span>Attached: {msg.attachedFileName}</span>
+                          </div>
+                        )}
+
+                        {!isUser && msg.categoryLabel && (
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#65517E] bg-[#E8E2F1] px-2 py-0.5 rounded-md border border-[#C8BFD8] w-fit mb-1">
+                            <Sparkles className="w-3 h-3 text-[#65517E]" strokeWidth={2.65} />
+                            <span>{msg.categoryLabel}</span>
+                          </div>
+                        )}
+
+                        {renderMessageContent(msg.text)}
 
                         {/* Numbered steps if returned by assistant */}
                         {msg.steps && msg.steps.length > 0 && (
@@ -436,6 +612,27 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
                 </div>
               )}
 
+              {/* File Attachment Preview Bar */}
+              {attachedFile && (
+                <div className="px-3.5 py-2 bg-[#DDEBDD] border-t border-[#A9C9AD] flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded bg-[#355C4B]/10 flex items-center justify-center border border-[#A9C9AD] shrink-0 text-[#355C4B]">
+                      <FileText className="w-3.5 h-3.5" strokeWidth={2.65} />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#355C4B] truncate">
+                      {attachedFile.name} ({(attachedFile.size / 1024).toFixed(1)} KB)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedFile(null)}
+                    className="text-[#355C4B] hover:text-[#29473A] font-bold text-[10px] cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
               {/* Input Area */}
               <div className="p-3 bg-[#FFFFFF] border-t border-[#E2E4DF] space-y-2">
                 <div className="relative">
@@ -444,11 +641,33 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type what you need help with... (Press Enter)"
-                    className="w-full pl-3 pr-20 py-2 bg-[#F4F4F1] border border-[#E2E4DF] rounded-xl text-xs text-[#303B38] placeholder-[#727A75]/80 focus:outline-hidden focus:ring-2 focus:ring-[#355C4B] focus:bg-[#FFFFFF] resize-none font-medium"
+                    placeholder="Ask anything, generate documents, code, or debug... (Enter)"
+                    className="w-full pl-3 pr-24 py-2 bg-[#F4F4F1] border border-[#E2E4DF] rounded-xl text-xs text-[#303B38] placeholder-[#727A75]/80 focus:outline-hidden focus:ring-2 focus:ring-[#355C4B] focus:bg-[#FFFFFF] resize-none font-medium"
+                  />
+
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept=".txt,.md,.py,.js,.ts,.jsx,.tsx,.json,.html,.css,.sql,.java,.c,.cpp,.h,.toml,.yaml,.yml,.sh,.bat,.ps1,.csv"
                   />
 
                   <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                        attachedFile
+                          ? 'bg-[#DDEBDD] text-[#355C4B] border-[#A9C9AD]'
+                          : 'bg-[#FFFFFF] hover:bg-[#ECEDE9] text-[#727A75] border-[#E2E4DF]'
+                      }`}
+                      title={attachedFile ? 'Change attached file' : 'Attach project file or code'}
+                    >
+                      <FileText className="w-4 h-4" strokeWidth={2.65} />
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => onOpenCapture()}
@@ -476,7 +695,7 @@ export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSend()}
-                        disabled={!input.trim() && !attachedScreenshot}
+                        disabled={!input.trim() && !attachedScreenshot && !attachedFile}
                         className="p-1.5 rounded-lg bg-[#355C4B] hover:bg-[#29473A] disabled:opacity-40 text-white transition-all cursor-pointer shadow-2xs"
                         title="Send question"
                         aria-label="Send question"

@@ -141,6 +141,354 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
+// Intelligent Request Understanding Engine - 14 Categories
+export type RequestCategory =
+  | 'computer_guidance'
+  | 'windows_troubleshooting'
+  | 'application_assistance'
+  | 'coding_programming'
+  | 'debugging_error'
+  | 'project_development'
+  | 'document_generation'
+  | 'readme_generation'
+  | 'file_folder_management'
+  | 'git_github'
+  | 'learning_explanations'
+  | 'productivity_planning'
+  | 'creative_assistance'
+  | 'screen_aware';
+
+function classifyRequestIntent(
+  message: string,
+  hasImage: boolean,
+  attachedFile?: { name: string; content: string }
+): { category: RequestCategory; label: string } {
+  if (hasImage) {
+    return { category: 'screen_aware', label: 'Screen Analysis' };
+  }
+
+  const lower = (message || '').toLowerCase();
+  const fileName = (attachedFile?.name || '').toLowerCase();
+
+  // 1. README Generation
+  if (
+    lower.includes('readme') ||
+    lower.includes('read me') ||
+    fileName.includes('readme') ||
+    ((fileName === 'package.json' || fileName === 'requirements.txt' || fileName === 'pyproject.toml' || fileName === 'cargo.toml') &&
+      (lower.includes('doc') || lower.includes('readme') || lower.includes('generate')))
+  ) {
+    return { category: 'readme_generation', label: 'README Generation' };
+  }
+
+  // 2. Debugging & Error Resolution
+  if (
+    lower.includes('error') ||
+    lower.includes('traceback') ||
+    lower.includes('exception') ||
+    lower.includes('stack trace') ||
+    lower.includes('syntaxerror') ||
+    lower.includes('typeerror') ||
+    lower.includes('indexerror') ||
+    lower.includes('crashed') ||
+    lower.includes('failed to compile') ||
+    lower.includes('segmentation fault') ||
+    lower.includes('bug in') ||
+    lower.includes('fix this')
+  ) {
+    return { category: 'debugging_error', label: 'Debugging & Errors' };
+  }
+
+  // 3. Git & GitHub
+  if (
+    /\bgit\b/.test(lower) ||
+    lower.includes('github') ||
+    lower.includes('commit') ||
+    lower.includes('merge conflict') ||
+    lower.includes('pull request') ||
+    lower.includes('git branch') ||
+    lower.includes('git rebase') ||
+    lower.includes('git clone') ||
+    lower.includes('repository') ||
+    lower.includes('untracked')
+  ) {
+    return { category: 'git_github', label: 'Git & GitHub' };
+  }
+
+  // 4. Project Development
+  if (
+    lower.includes('build a project') ||
+    lower.includes('project idea') ||
+    lower.includes('how to build an app') ||
+    lower.includes('architecture') ||
+    lower.includes('folder structure') ||
+    lower.includes('tech stack') ||
+    lower.includes('starter code') ||
+    lower.includes('scaffold') ||
+    lower.includes('create a project')
+  ) {
+    return { category: 'project_development', label: 'Project Development' };
+  }
+
+  // 5. Document Generation
+  if (
+    lower.includes('resume') ||
+    lower.includes('cover letter') ||
+    lower.includes('proposal') ||
+    lower.includes('write an email') ||
+    lower.includes('formal email') ||
+    lower.includes('meeting notes') ||
+    lower.includes('study notes') ||
+    lower.includes('report') ||
+    lower.includes('spec sheet') ||
+    lower.includes('development plan')
+  ) {
+    return { category: 'document_generation', label: 'Document Generation' };
+  }
+
+  // 6. Coding & Programming
+  if (
+    lower.includes('python') ||
+    lower.includes('javascript') ||
+    lower.includes('typescript') ||
+    lower.includes('react') ||
+    lower.includes('node.js') ||
+    lower.includes('html') ||
+    lower.includes('css') ||
+    lower.includes('sql') ||
+    lower.includes('java ') ||
+    lower.includes('c++') ||
+    lower.includes('c#') ||
+    lower.includes('rust') ||
+    lower.includes('write a script') ||
+    lower.includes('write code') ||
+    lower.includes('function that') ||
+    lower.includes('algorithm') ||
+    lower.includes('api endpoint') ||
+    fileName.endsWith('.py') ||
+    fileName.endsWith('.js') ||
+    fileName.endsWith('.ts') ||
+    fileName.endsWith('.jsx') ||
+    fileName.endsWith('.tsx') ||
+    fileName.endsWith('.html') ||
+    fileName.endsWith('.css') ||
+    fileName.endsWith('.sql') ||
+    fileName.endsWith('.cpp')
+  ) {
+    return { category: 'coding_programming', label: 'Coding & Programming' };
+  }
+
+  // 7. File & Folder Management
+  if (
+    lower.includes('folder') ||
+    lower.includes('directory') ||
+    lower.includes('zip') ||
+    lower.includes('unzip') ||
+    lower.includes('file explorer') ||
+    lower.includes('rename file') ||
+    lower.includes('move file') ||
+    lower.includes('extract') ||
+    lower.includes('file path')
+  ) {
+    return { category: 'file_folder_management', label: 'Files & Folders' };
+  }
+
+  // 8. Windows Troubleshooting
+  if (
+    lower.includes('bluetooth') ||
+    lower.includes('wifi') ||
+    lower.includes('wi-fi') ||
+    lower.includes('audio') ||
+    lower.includes('sound') ||
+    lower.includes('microphone') ||
+    lower.includes('printer') ||
+    lower.includes('resolution') ||
+    lower.includes('display settings') ||
+    lower.includes('task manager') ||
+    lower.includes('driver') ||
+    lower.includes('blue screen') ||
+    lower.includes('frozen')
+  ) {
+    return { category: 'windows_troubleshooting', label: 'Windows Troubleshooting' };
+  }
+
+  // 9. Application Assistance
+  if (
+    lower.includes('chrome') ||
+    lower.includes('browser') ||
+    lower.includes('vs code') ||
+    lower.includes('vscode') ||
+    lower.includes('visual studio') ||
+    lower.includes('pycharm') ||
+    lower.includes('intellij') ||
+    lower.includes('extension') ||
+    lower.includes('profile') ||
+    lower.includes('terminal in vs')
+  ) {
+    return { category: 'application_assistance', label: 'Application Assistance' };
+  }
+
+  // 10. Productivity & Planning
+  if (
+    lower.includes('schedule') ||
+    lower.includes('plan my day') ||
+    lower.includes('productivity') ||
+    lower.includes('sprint') ||
+    lower.includes('checklist') ||
+    lower.includes('time management')
+  ) {
+    return { category: 'productivity_planning', label: 'Productivity & Planning' };
+  }
+
+  // 11. Learning & Explanations
+  if (
+    lower.startsWith('what is') ||
+    lower.startsWith('explain') ||
+    lower.startsWith('how does') ||
+    lower.startsWith('difference between') ||
+    lower.includes('concept') ||
+    lower.includes('analogy')
+  ) {
+    return { category: 'learning_explanations', label: 'Learning & Concepts' };
+  }
+
+  // 12. Creative Assistance
+  if (
+    lower.includes('name for my') ||
+    lower.includes('brainstorm') ||
+    lower.includes('tagline') ||
+    lower.includes('pitch') ||
+    lower.includes('slogan')
+  ) {
+    return { category: 'creative_assistance', label: 'Creative Ideas' };
+  }
+
+  return { category: 'computer_guidance', label: 'Computer Guidance' };
+}
+
+function buildSystemInstruction(
+  category: RequestCategory,
+  osContext: string,
+  attachedFileName?: string
+): string {
+  const base = `You are DeskSense, an intelligent, patient, empathetic, and versatile desktop productivity and computer companion.
+Your audience spans first-time computer users, students, developers, creators, and professionals.`;
+
+  let modeSpecific = '';
+
+  switch (category) {
+    case 'readme_generation':
+      modeSpecific = `INTERACTIVE README WORKFLOW:
+- When a user asks to generate a README for their application:
+  If they have NOT yet provided essential project details (project name, core purpose, tech stack, how to run) AND no project configuration file is attached:
+  DO NOT immediately generate a generic placeholder README!
+  Instead, start an interactive requirements-gathering conversation. Politely ask 2 to 3 focused, friendly questions:
+  1. What is the project name and what does it do in 1-2 sentences?
+  2. What tech stack or languages does it use?
+  3. How do you install and run it?
+  Assure them they can say "I don't know" or attach a file like package.json or requirements.txt.
+- If an attached file was provided (${attachedFileName || 'project file'}), inspect its exact contents (e.g. name, dependencies, scripts, run commands) and explicitly summarize what you extracted, asking only for missing context.
+- If the user HAS provided enough project information (either in this message or previous conversation):
+  Generate a COMPLETE, production-ready, beautifully structured README.md formatted inside a single \`\`\`markdown code block.
+  Include: Title & Pitch, Overview, Key Features, Tech Stack, Prerequisites, Installation, Usage / Commands, Project Structure, Contributing, License, Author. Ensure it is complete and ready to export as a real .md file without empty "[TODO]" placeholders.`;
+      break;
+
+    case 'document_generation':
+      modeSpecific = `INTELLIGENT DOCUMENT GENERATION:
+- Generate complete, professional, publication-ready documents (resumes, cover letters, formal emails, project proposals, reports, study notes, development plans).
+- Format the document inside a \`\`\`markdown code block so the user can easily copy or download it.
+- Use clean headings, organized bullet points, and actionable language. Avoid leaving unfinished bracketed placeholders.`;
+      break;
+
+    case 'coding_programming':
+      modeSpecific = `ADVANCED CODING ASSISTANT:
+- Support Python, JavaScript, TypeScript, HTML, CSS, React, Node.js, SQL, Java, C, C++, and other common languages.
+- Support environments like Visual Studio Code, PyCharm, Windows Terminal, PowerShell, Git, and Command Prompt.
+- Provide clean, runnable, well-commented code inside language-tagged code blocks (\`\`\`python, \`\`\`javascript, etc.).
+- Explain technical decisions in calm, clear language.
+- Explain terminal commands step-by-step BEFORE the user runs them.
+- If any command could delete files or reset history (e.g. rm, del, git reset --hard, DROP TABLE), issue an explicit SAFETY WARNING with backup advice.
+- Never pretend to have inspected code or files that the user has not shared.`;
+      break;
+
+    case 'debugging_error':
+      modeSpecific = `DEBUGGING & ERROR RESOLUTION:
+- Carefully analyze the error message, traceback, or code snippet provided.
+- Explain why the error occurred in plain, beginner-friendly English.
+- Identify 1-3 likely root causes.
+- Provide the exact corrected code snippet or command.
+- Explain how to avoid this error in the future.
+- Never invent error lines that were not provided.`;
+      break;
+
+    case 'project_development':
+      modeSpecific = `PROJECT DEVELOPMENT COMPANION:
+- Help users bring ideas to life with structured guidance.
+- Break projects into logical milestones: Planning -> Architecture -> Core Logic -> UI -> Testing -> Deployment.
+- Recommend appropriate technology stacks with pros and cons.
+- Provide clean folder structure diagrams and starter boilerplate code.
+- Guide users through dependencies, project configuration, and tools.`;
+      break;
+
+    case 'git_github':
+      modeSpecific = `GIT & GITHUB ASSISTANT:
+- Provide clear, safe step-by-step Git commands.
+- Explain what each command does before the user runs it.
+- CRITICAL SAFETY: If the user is asking to delete, reset, or wipe files (e.g. git clean, git reset --hard, git checkout ., git push --force), you MUST start with a prominent WARNING explaining that changes will be permanently discarded without going to the Recycle Bin. Provide a safe inspection or dry-run check (such as git clean -nd or git status) first.`;
+      break;
+
+    case 'file_folder_management':
+      modeSpecific = `FILE & FOLDER MANAGEMENT:
+- Provide patient, step-by-step guidance for ${osContext}.
+- Include relevant shortcuts (e.g. Ctrl+Shift+N for new folder, F2 to rename, Ctrl+Z to undo).`;
+      break;
+
+    case 'windows_troubleshooting':
+      modeSpecific = `WINDOWS & SYSTEM TROUBLESHOOTING:
+- Provide calm, reassuring troubleshooting steps for ${osContext}.
+- Start with simple, non-destructive fixes before suggesting deep registry or driver modifications.`;
+      break;
+
+    case 'application_assistance':
+      modeSpecific = `APPLICATION ASSISTANCE:
+- Provide exact application-specific navigation steps (VS Code, Chrome, PyCharm, etc.).
+- Describe menus, shortcuts, and settings clearly.`;
+      break;
+
+    case 'productivity_planning':
+      modeSpecific = `PRODUCTIVITY & PLANNING:
+- Provide structured, practical task breakdowns, checklists, or sprint plans.`;
+      break;
+
+    case 'learning_explanations':
+      modeSpecific = `CONCEPT EXPLANATIONS:
+- Explain complex concepts using a relatable real-world analogy first, followed by clear technical specifics.`;
+      break;
+
+    case 'creative_assistance':
+      modeSpecific = `CREATIVE ASSISTANCE:
+- Provide creative, memorable ideas grouped by theme with brief rationales.`;
+      break;
+
+    case 'screen_aware':
+      modeSpecific = `SCREEN-AWARE ASSISTANCE:
+- Carefully inspect the captured screen. Refer only to visible buttons, menus, and text. Never hallucinate elements.`;
+      break;
+
+    default:
+      modeSpecific = `COMPUTER GUIDANCE:
+- Explain things step-by-step in calm, plain language. Keep answers concrete, actionable, and concise.`;
+  }
+
+  const generalRules = `General Principles:
+- If a request is completely ambiguous (e.g. just "help" or "fix it" without any context, code, or error), politely ask 1 short clarification question.
+- If providing numbered steps, format them clearly (1., 2., 3.).
+- Clearly distinguish suggestions from actions actually completed.
+- When generating real outputs (documents, READMEs, scripts), provide complete, copyable, exportable content.`;
+
+  return `${base}\n\n${modeSpecific}\n\n${generalRules}`;
+}
+
 // Real model response streaming endpoint (Server-Sent Events)
 app.post('/api/chat/stream', async (req, res) => {
   const requestStart = Date.now();
@@ -152,10 +500,16 @@ app.post('/api/chat/stream', async (req, res) => {
   });
 
   try {
-    const { message, history = [], imageBase64, osContext = 'Windows 11' } = req.body;
+    const {
+      message,
+      history = [],
+      imageBase64,
+      attachedFile,
+      osContext = 'Windows 11',
+    } = req.body;
 
-    if (!message && !imageBase64) {
-      return res.status(400).json({ error: 'Please provide a question or attached screenshot.' });
+    if (!message && !imageBase64 && !attachedFile) {
+      return res.status(400).json({ error: 'Please provide a question, attached file, or screenshot.' });
     }
 
     if (!ai) {
@@ -170,15 +524,26 @@ app.post('/api/chat/stream', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders?.();
 
-    // Context management: keep only last 4 messages to prevent token bloat
-    const recentHistory = Array.isArray(history) ? history.slice(-4) : [];
+    // Context management: keep last 6 messages to preserve requirements across turns
+    const recentHistory = Array.isArray(history) ? history.slice(-6) : [];
     const formattedHistory = recentHistory
       .map((h: any) => `${h.role === 'user' ? 'User' : 'DeskSense'}: ${h.text}`)
-      .join('\n');
+      .join('\n\n');
+
+    // Intelligent Request Understanding Engine
+    const intent = classifyRequestIntent(message, Boolean(imageBase64), attachedFile);
+
+    let filePromptSection = '';
+    if (attachedFile && attachedFile.content) {
+      filePromptSection = `Attached File: "${attachedFile.name}" (${attachedFile.size || attachedFile.content.length} bytes)
+\`\`\`${attachedFile.name.split('.').pop() || 'text'}
+${attachedFile.content.slice(0, 30000)}
+\`\`\`\n\n`;
+    }
 
     const promptText = `${
-      formattedHistory ? `Recent conversation context:\n${formattedHistory}\n\n` : ''
-    }User Question (${osContext}): "${message || 'Analyze this screen.'}"`;
+      formattedHistory ? `Previous conversation context:\n${formattedHistory}\n\n` : ''
+    }${filePromptSection}User Question (${osContext}): "${message || 'Please inspect the attached file / screen.'}"`;
 
     let contentsPayload: any;
     if (imageBase64) {
@@ -196,19 +561,21 @@ app.post('/api/chat/stream', async (req, res) => {
       contentsPayload = promptText;
     }
 
-    const systemInstruction = `You are DeskSense, an empathetic, patient, and knowledgeable computer literacy mentor.
-Your audience includes students, beginners, and everyday users.
-Guidelines:
-- Explain things step-by-step in calm, plain language.
-- Keep answers concrete, actionable, and concise. Avoid unnecessary conversational filler.
-- If providing steps, format them clearly with numbers (1., 2., 3.) so they are easy to follow.
-- End with a reassuring 1-sentence learning tip if appropriate.`;
+    const systemInstruction = buildSystemInstruction(
+      intent.category,
+      osContext,
+      attachedFile?.name
+    );
 
     const candidateList = imageBase64 ? VISION_MODELS : FAST_MODELS;
-    const { stream, modelUsed } = await streamWithFallback(ai, {
-      contents: contentsPayload,
-      config: { systemInstruction },
-    }, candidateList);
+    const { stream, modelUsed } = await streamWithFallback(
+      ai,
+      {
+        contents: contentsPayload,
+        config: { systemInstruction },
+      },
+      candidateList
+    );
 
     for await (const chunk of stream) {
       if (isClosed || res.writableEnded || res.destroyed) break;
@@ -220,6 +587,8 @@ Guidelines:
             `event: meta\ndata: ${JSON.stringify({
               ttftMs: firstTokenTime,
               model: modelUsed,
+              category: intent.category,
+              categoryLabel: intent.label,
             })}\n\n`
           );
         }
@@ -231,7 +600,7 @@ Guidelines:
     console.log(
       `[DeskSense Perf] /api/chat/stream completed in ${(totalTimeMs / 1000).toFixed(2)}s (TTFT: ${(
         (firstTokenTime || 0) / 1000
-      ).toFixed(2)}s, Model: ${modelUsed})`
+      ).toFixed(2)}s, Model: ${modelUsed}, Mode: ${intent.label})`
     );
 
     res.write(
@@ -239,6 +608,7 @@ Guidelines:
         totalTimeMs,
         ttftMs: firstTokenTime || totalTimeMs,
         model: modelUsed,
+        category: intent.category,
       })}\n\n`
     );
     res.end();
